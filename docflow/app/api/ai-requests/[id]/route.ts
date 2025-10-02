@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from '../../../generated/prisma'
+import { getUserIdFromToken } from "@/lib/auth";
 
 const globalForPrisma = globalThis as unknown as {
 	prisma: PrismaClient | undefined
@@ -14,13 +15,26 @@ export async function GET(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		//recovery userId by parameters query
+		const userId = getUserIdFromToken(req);
+		//check if userId is present
+		if (!userId) {
+			return NextResponse.json(
+				{ error: "Unauthorized" },
+				{ status: 401 }
+			);
+		}
+
 		// recovery the request AI ID
 		const { id } = await params;
 		const requestId = id;
 
 		// search AI request by ID with his relation
-		const aiRequest = await prisma.aiRequest.findUnique({
-			where: { id: requestId },
+		const aiRequest = await prisma.aiRequest.findFirst({
+			where: {
+				id: requestId,
+				userId: userId
+			},
 			select: {
 				id: true,
 				userId: true,
@@ -72,9 +86,34 @@ export async function DELETE(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		//recovery userId by parameters query
+		const userId = getUserIdFromToken(req);
+		//check if userId is present
+		if (!userId) {
+			return NextResponse.json(
+				{ error: "Unauthorized" },
+				{ status: 401 }
+			);
+		}
+
 		// recovery the AI request
 		const { id } = await params;
 		const requestId = id;
+
+		// check the properties
+		const existingAiRequest = await prisma.aiRequest.findFirst({
+			where: {
+				id: requestId,
+				userId: userId
+			}
+		});
+
+		if (!existingAiRequest) {
+			return NextResponse.json(
+				{ error: "Document not found" },
+				{ status: 404 }
+			);
+		}
 
 		// delete the AI request
 		await prisma.aiRequest.delete({

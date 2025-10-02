@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from '../../../generated/prisma'
+import { generateToken } from '../../../../lib/auth';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
     //compared the password
     const isValidPassword = await bcrypt.compare(password, user.password);
 
-    //check id the password is correct
+    //check if the password is correct
     if (!isValidPassword) {
       return NextResponse.json(
         { error: "Invalid credentials" },
@@ -47,9 +48,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    //return user info
+    const token = generateToken({
+      userId: user.id,
+      email: user.email
+    });
+
     return NextResponse.json({
       message: "Login successful",
+      token,
       user: {
         id: user.id,
         firstName: user.firstName,

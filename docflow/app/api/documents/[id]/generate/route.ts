@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from '../../../../generated/prisma'
+import { getUserIdFromToken } from "@/lib/auth";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -14,6 +15,16 @@ export async function POST(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		//recovery userId by parameters query
+		const userId = getUserIdFromToken(req);
+		//check if userId is present
+		if (!userId) {
+			return NextResponse.json(
+				{ error: "Unauthorized" },
+				{ status: 401 }
+			);
+		}
+
 		// recovery ID's document from the params
 		const { id } = await params;
 		const documentId = id;
@@ -30,8 +41,11 @@ export async function POST(
 		}
 
 		// verify if the document exist
-		const document = await prisma.userDocuments.findUnique({
-			where: { id: documentId }
+		const document = await prisma.userDocuments.findFirst({
+			where: {
+				id: documentId,
+				userId: userId
+			}
 		});
 
 		if (!document) {
@@ -93,13 +107,26 @@ export async function GET(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		//recovery userId by parameters query
+		const userId = getUserIdFromToken(req);
+		//check if userId is present
+		if (!userId) {
+			return NextResponse.json(
+				{ error: "Unauthorized" },
+				{ status: 401 }
+			);
+		}
+
 		// recovery the ID's document
 		const { id } = await params;
 		const documentId = id;
 
 		// check if the document exist
-		const document = await prisma.userDocuments.findUnique({
-			where: { id: documentId }
+		const document = await prisma.userDocuments.findFirst({
+			where: {
+				id: documentId,
+				userId: userId
+			}
 		});
 
 		if (!document) {

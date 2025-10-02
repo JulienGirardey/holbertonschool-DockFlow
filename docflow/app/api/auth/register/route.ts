@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from '../../../generated/prisma'
+import { generateToken } from "@/lib/auth";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -62,11 +63,23 @@ export async function POST(req: NextRequest) {
             }
         });
 
+		// generate token
+		const token = generateToken({
+			userId: user.id,
+			email: user.email
+		});
+
         //return response
         return NextResponse.json(
             {
                 message: "User created successfully",
-                userId: user.id
+				token,
+                user: {
+					id: user.id,
+					firstName: user.firstName,
+					lastName: user.lastName,
+					email: user.email
+				}
             },
             { status: 201 }
         );

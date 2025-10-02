@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from '../../generated/prisma'
+import { getUserIdFromToken } from "@/lib/auth";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -12,14 +13,12 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 export async function GET(req: NextRequest) {
 	try {
 		//recovery userId by parameters query
-		const { searchParams } = new URL(req.url);
-		const userId = searchParams.get('userId');
-
+		const userId = getUserIdFromToken(req);
 		//check if userId is present
 		if (!userId) {
 			return NextResponse.json(
-				{ error: "User ID is required" },
-				{ status: 400 }
+				{ error: "Unauthorized" },
+				{ status: 401 }
 			);
 		}
 
@@ -51,11 +50,20 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
 	try {
+		// recovery the userId of JWT token
+		const userId = getUserIdFromToken(req);
+		if (!userId) {
+			return NextResponse.json(
+				{ error: "Unauthorized" },
+				{ status: 401 }
+			);
+		}
+
 		// recovery the data of body
-		const { userId, title, objective, rawContent } = await req.json();
+		const { title, objective, rawContent } = await req.json();
 
 		// validation
-		if (!userId || !title || !objective || !rawContent) {
+		if (!title || !objective || !rawContent) {
 			return NextResponse.json(
 				{ error: "All fields are required (userId, title, objective, rawContent)" },
 				{ status: 400 }
