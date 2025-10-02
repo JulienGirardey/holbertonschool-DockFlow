@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from '../../../generated/prisma'
+import { PrismaClient } from '../../generated/prisma'
+import { getUserIdFromToken } from "@/lib/auth";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -11,17 +12,15 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 export async function GET(
 	req: NextRequest,
-	{ params }: { params: { userId: string } }
+	{ params }: { params: Promise<{ userId: string }> }
 ) {
 	try {
 		// recovery userId from the parameters query
-		const userId = (await params).userId;
-
-		// validation
+		const userId = getUserIdFromToken(req);
 		if (!userId) {
 			return NextResponse.json(
-				{ error: "User ID is required" },
-				{ status: 400 }
+				{ error: "Unauthorized" },
+				{ status: 401 }
 			);
 		}
 
@@ -58,20 +57,21 @@ export async function GET(
 
 export async function PUT(
 	req: NextRequest,
-	{ params }: { params: { userId: string } }
+	{ params }: { params: Promise<{ userId: string }> }
 ) {
 	try {
 		// recovery body's data
-		const userId = (await params).userId;
-		const { colorMode, language } = await req.json();
+		const userId = getUserIdFromToken(req);
 
 		// validation
 		if (!userId) {
 			return NextResponse.json(
-				{ error: "User ID is required" },
-				{ status: 400 }
+				{ error: "Unauthorized" },
+				{ status: 401 }
 			);
 		}
+
+		const { colorMode, language } = await req.json();
 
 		// validation of obligated field
 		if (!language || !colorMode) {
