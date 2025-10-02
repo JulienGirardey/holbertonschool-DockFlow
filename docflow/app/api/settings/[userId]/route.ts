@@ -62,7 +62,7 @@ export async function PUT(
 ) {
 	try {
 		// recovery body's data
-		const userId = params.userId;
+		const userId = (await params).userId;
 		const { colorMode, language } = await req.json();
 
 		// validation
