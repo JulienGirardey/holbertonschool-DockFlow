@@ -15,7 +15,7 @@ export async function GET(
 ) {
 	try {
 		// recovery userId from the parameters query
-		const userId = params.userId;
+		const userId = (await params).userId;
 
 		// validation
 		if (!userId) {
