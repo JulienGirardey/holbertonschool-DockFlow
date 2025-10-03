@@ -10,10 +10,7 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
-export async function GET(
-	req: NextRequest,
-	{ params }: { params: Promise<{ userId: string }> }
-) {
+export async function GET(req: NextRequest) {
 	try {
 		// recovery userId from the parameters query
 		const userId = getUserIdFromToken(req);
@@ -55,10 +52,7 @@ export async function GET(
 	}
 }
 
-export async function PUT(
-	req: NextRequest,
-	{ params }: { params: Promise<{ userId: string }> }
-) {
+export async function PUT(req: NextRequest) {
 	try {
 		// recovery body's data
 		const userId = getUserIdFromToken(req);
