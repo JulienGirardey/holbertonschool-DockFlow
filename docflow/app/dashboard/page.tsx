@@ -8,15 +8,39 @@ interface Document {
   createdAt: string
 }
 
+interface UserSettings {
+  language: string
+  colorMode: string
+}
+
+interface User {
+  firstName: string
+  lastName: string
+  email: string
+}
+
 export default function Dashboard() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeSection, setActiveSection] = useState<'profile' | 'create' | 'documents'>('documents')
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null)
+  const [profilLoading, setProfileLoading] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const [userInfo, setUserInfo] = useState<User | null>(null)
+  const [userLoading, setUserLoading] = useState(false)
+  const [userError, setUserError] = useState('') 
 
   useEffect(() => {
     fetchDocuments()
   }, [])
+
+  useEffect(() => {
+    if (activeSection === 'profile') {
+        setProfileLoading(true)
+        fetchUserSettings()
+    }
+  }, [activeSection])
 
   const fetchDocuments = async () => {
     try {
@@ -42,6 +66,44 @@ export default function Dashboard() {
       setError(err instanceof Error ? err.message : 'Error fetching documents')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchUserSettings = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      setError('No token found')
+      return
+    }
+
+    const response = await fetch('/api/settings', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch settings')
+    }
+    const settings = await response.json()
+    setUserSettings(settings)
+  } catch (err) {
+    setProfileError(err instanceof Error ? err.message : 'Error fetching settings')
+  } finally {
+    setProfileLoading(false)
+  }
+  }
+
+  const getUserFromToken = () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return null
+
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      return {
+        email: payload.email,
+      }
     }
   }
 
@@ -123,7 +185,21 @@ export default function Dashboard() {
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
               👤 Profile
             </h2>
-            <p>Informations du profil utilisateur</p>
+        
+            {profilLoading ? (
+                <p>Chargement du profil...</p>
+            ) : profileError ? (
+              <p style={{ color: 'red' }}>Erreur: {profileError}</p>
+            ) : userSettings ? (
+                <div>
+                    <p>Frist Name: {userInfo.firstName}</p>
+                    <p>Last Name: {userInfo.lastName}</p>
+                    <p>Language: {userSettings.language}</p>
+                    <p>Color Mode: {userSettings.colorMode}</p>
+                </div>
+            ) : (
+                <p>Aucune donnée disponible</p>
+            )}
           </div>
         )}
 
