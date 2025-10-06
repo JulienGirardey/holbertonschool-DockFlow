@@ -25,6 +25,12 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeSection, setActiveSection] = useState<'profile' | 'create' | 'documents'>('documents')
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null)
+  const [profilLoading, setProfileLoading] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const [userInfo, setUserInfo] = useState<User | null>(null)
+  const [userLoading, setUserLoading] = useState(false)
+  const [userError, setUserError] = useState('') 
 
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null)
   const [profilLoading, setProfileLoading] = useState(false)
@@ -54,6 +60,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (activeSection === 'profile') {
+<<<<<<< HEAD
       const token = localStorage.getItem('token')
       if (!token) {
         router.push('/login')
@@ -63,6 +70,10 @@ export default function Dashboard() {
       setProfileLoading(true)
       fetchUserSettings()
       fetchUserInfo()
+=======
+        setProfileLoading(true)
+        fetchUserSettings()
+>>>>>>> e64dd2ea8e28c7b16bf589ef00c2798ce2ff8445
     }
   }, [activeSection])
 
@@ -95,6 +106,7 @@ export default function Dashboard() {
   }
 
   const fetchUserSettings = async () => {
+<<<<<<< HEAD
     try {
       const token = localStorage.getItem('token')
 
@@ -203,6 +215,45 @@ export default function Dashboard() {
     setEditColorMode(userSettings?.colorMode || '')
   }
 
+=======
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      setError('No token found')
+      return
+    }
+
+    const response = await fetch('/api/settings', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch settings')
+    }
+    const settings = await response.json()
+    setUserSettings(settings)
+  } catch (err) {
+    setProfileError(err instanceof Error ? err.message : 'Error fetching settings')
+  } finally {
+    setProfileLoading(false)
+  }
+  }
+
+  const getUserFromToken = () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return null
+
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      return {
+        email: payload.email,
+      }
+    }
+  }
+// test for branch
+>>>>>>> e64dd2ea8e28c7b16bf589ef00c2798ce2ff8445
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
       <div style={{
@@ -281,6 +332,7 @@ export default function Dashboard() {
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
               👤 Profile
             </h2>
+<<<<<<< HEAD
 
             {(profilLoading || userLoading) ? (
               <p>Chargement du profil...</p>
@@ -401,6 +453,22 @@ export default function Dashboard() {
               </div>
             ) : (
               <p>Aucune donnée disponible</p>
+=======
+        
+            {profilLoading ? (
+                <p>Chargement du profil...</p>
+            ) : profileError ? (
+              <p style={{ color: 'red' }}>Erreur: {profileError}</p>
+            ) : userSettings ? (
+                <div>
+                    <p>Frist Name: {userInfo.firstName}</p>
+                    <p>Last Name: {userInfo.lastName}</p>
+                    <p>Language: {userSettings.language}</p>
+                    <p>Color Mode: {userSettings.colorMode}</p>
+                </div>
+            ) : (
+                <p>Aucune donnée disponible</p>
+>>>>>>> e64dd2ea8e28c7b16bf589ef00c2798ce2ff8445
             )}
           </div>
         )}
