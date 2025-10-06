@@ -42,6 +42,11 @@ export default function Dashboard() {
   const [saveLoading, setSaveLoading] = useState(false)
   const[saveError, setSaveError] = useState('')
 
+  const [newDocTitle, setNewDocTitle] = useState('')
+  const [newDocContent, setNewDocContent] = useState('')
+  const [createLoading, setCreateLoading] = useState(false)
+  const [createError, setCreateError] = useState('')
+
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) {
@@ -201,6 +206,56 @@ export default function Dashboard() {
     setEditingSettings(true)
     setEditLanguage(userSettings?.language || '')
     setEditColorMode(userSettings?.colorMode || '')
+  }
+
+  const handleCreateDocument = async () => {
+    try {
+      setCreateLoading(true)
+      setCreateError('')
+
+      const token = localStorage.getItem('token')
+
+      const requestData = {
+        title: newDocTitle.trim(),
+        objective: newDocTitle.trim(),
+        rawContent: newDocContent.trim()
+      }
+      
+      console.log('Request data:', requestData)
+
+      const response = await fetch('/api/documents', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.log('API Error:', errorData)
+        
+        if (response.status === 401) {
+          localStorage.removeItem('token')
+          router.push('/login')
+          return
+        }
+        throw new Error(errorData.error || 'Failed to create document')
+      }
+
+      const newDocument = await response.json()
+      setDocuments(prev => [newDocument, ...prev])
+      setNewDocTitle('')
+      setNewDocContent('')
+      setActiveSection('documents')
+      
+    } catch (err) {
+      console.error('Creation error:', err)
+      setCreateError(err instanceof Error ? err.message : 'Error creating document')
+    } finally {
+      setCreateLoading(false)
+    }
   }
 
   return (
@@ -410,7 +465,71 @@ export default function Dashboard() {
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
               📝 Create New Document
             </h2>
-            <p>Formulaire de création de document</p>
+            
+            <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <input
+                  type="text"
+                  placeholder="put your task"
+                  value={newDocTitle}
+                  onChange={(e) => setNewDocTitle(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    backgroundColor: '#f9fafb',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <textarea
+                  placeholder="text area where past your text"
+                  value={newDocContent}
+                  onChange={(e) => setNewDocContent(e.target.value)}
+                  rows={10}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    backgroundColor: '#f9fafb',
+                    fontSize: '1rem',
+                    resize: 'vertical',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
+              {createError && (
+                <div style={{ 
+                  marginBottom: '1rem', 
+                  padding: '0.75rem', 
+                  backgroundColor: '#fef2f2', 
+                  border: '1px solid #fca5a5', 
+                  color: '#dc2626', 
+                  borderRadius: '0.375rem' 
+                }}>
+                  {createError}
+                </div>
+              )}
+
+              <button
+                onClick={handleCreateDocument}
+                disabled={createLoading || !newDocTitle.trim() || !newDocContent.trim()}
+                className="login-button"
+                style={{
+                  width: 'auto',
+                  padding: '0.75rem 2rem',
+                  fontSize: '1rem',
+                  opacity: (createLoading || !newDocTitle.trim() || !newDocContent.trim()) ? 0.5 : 1
+                }}
+              >
+                {createLoading ? 'Creating document...' : 'Generate doc'}
+              </button>
+            </div>
           </div>
         )}
 
