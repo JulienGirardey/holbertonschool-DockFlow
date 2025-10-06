@@ -7,6 +7,7 @@ interface Document {
   id: string
   title: string
   createdAt: string
+  content?: string  // ← Ajoutez cette ligne pour le contenu
 }
 
 interface UserSettings {
@@ -47,6 +48,11 @@ export default function Dashboard() {
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState('')
 
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
+  const [documentContent, setDocumentContent] = useState('')
+  const [loadingContent, setLoadingContent] = useState(false)
+  const [contentError, setContentError] = useState('')
+
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) {
@@ -70,6 +76,12 @@ export default function Dashboard() {
       fetchUserInfo()
     }
   }, [activeSection])
+
+  useEffect(() => {
+    if (selectedDocument) {
+      fetchDocumentContent(selectedDocument.id)
+    }
+  }, [selectedDocument])
 
   const fetchDocuments = async () => {
     try {
@@ -258,58 +270,138 @@ export default function Dashboard() {
     }
   }
 
+  const fetchDocumentContent = async (documentId: string) => {
+    try {
+      setLoadingContent(true)
+      setContentError('')
+      
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/login')
+        return
+      }
+
+      const response = await fetch(`/api/documents/${documentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token')
+          router.push('/login')
+          return
+        }
+        throw new Error('Failed to fetch document content')
+      }
+
+      const document = await response.json()
+      setDocumentContent(document.content || document.rawContent || 'Aucun contenu disponible')
+      
+    } catch (err) {
+      setContentError(err instanceof Error ? err.message : 'Error fetching document')
+    } finally {
+      setLoadingContent(false)
+    }
+  }
+
+  // Fonction pour fermer la vue document
+  const closeDocumentView = () => {
+    setSelectedDocument(null)
+    setDocumentContent('')
+    setContentError('')
+  }
+
+  const handleLogout = () => {
+    // Supprimer le token du localStorage
+    localStorage.removeItem('token')
+    
+    // Rediriger vers la page de login
+    router.push('/login')
+  }
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
       <div style={{
         width: '250px',
         backgroundColor: '#e5e7eb',
-        padding: '1rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem'
+        height: '100vh',  // ← Hauteur fixe de l'écran
+        position: 'sticky', // ← Reste collée lors du scroll de la page
+        top: 0              // ← Collée en haut
       }}>
-        <button
-          onClick={() => setActiveSection('profile')}
-          style={{
-            padding: '0.75rem 1rem',
-            backgroundColor: activeSection === 'profile' ? '#3b82f6' : '#93c5fd',
-            color: 'white',
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          profile
-        </button>
+        
+        {/* Header de navigation - fixe */}
+        <div style={{ 
+          padding: '1rem',
+          borderBottom: '1px solid #d1d5db'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <button
+              onClick={() => setActiveSection('profile')}
+              style={{
+                padding: '0.75rem 1rem',
+                backgroundColor: activeSection === 'profile' ? '#3b82f6' : '#93c5fd',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              👤 Profile
+            </button>
 
-        <button
-          onClick={() => setActiveSection('create')}
-          style={{
-            padding: '0.75rem 1rem',
-            backgroundColor: activeSection === 'create' ? '#3b82f6' : '#93c5fd',
-            color: 'white',
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          create doc
-        </button>
+            <button
+              onClick={() => setActiveSection('create')}
+              style={{
+                padding: '0.75rem 1rem',
+                backgroundColor: activeSection === 'create' ? '#3b82f6' : '#93c5fd',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              📝 Create Doc
+            </button>
+          </div>
+        </div>
 
-        <div style={{ marginTop: '1rem' }}>
+        {/* Zone scrollable pour les documents */}
+        <div style={{ 
+          flex: 1, 
+          padding: '1rem',
+          overflow: 'auto',  // ← Scroll interne seulement pour cette zone
+          minHeight: 0       // ← Permet au flex de se comprimer
+        }}>
+          <h3 style={{ 
+            color: '#374151', 
+            fontSize: '0.875rem', 
+            fontWeight: 'bold', 
+            marginBottom: '0.5rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            Mes Documents
+          </h3>
+          
           {loading ? (
-            <p>Chargement...</p>
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Chargement...</p>
           ) : error ? (
-            <p style={{ color: 'red' }}>Erreur: {error}</p>
+            <p style={{ color: 'red', fontSize: '0.875rem' }}>Erreur: {error}</p>
+          ) : documents.length === 0 ? (
+            <p style={{ color: '#6b7280', fontSize: '0.875rem', fontStyle: 'italic' }}>
+              Aucun document
+            </p>
           ) : (
             documents.map(doc => (
               <button
                 key={doc.id}
-                onClick={() => {
-                  setActiveSection('documents')
-                }}
+                onClick={() => setActiveSection('documents')}
                 style={{
                   display: 'block',
                   width: '100%',
@@ -320,13 +412,72 @@ export default function Dashboard() {
                   borderRadius: '0.5rem',
                   marginBottom: '0.5rem',
                   cursor: 'pointer',
-                  textAlign: 'left'
+                  textAlign: 'left',
+                  fontSize: '0.875rem'
                 }}
               >
-                {doc.title || 'doc'}
+                📄 {doc.title.length > 20 ? doc.title.substring(0, 20) + '...' : doc.title}
               </button>
             ))
           )}
+        </div>
+
+        {/* Footer fixe avec user info + déconnexion */}
+        <div style={{ 
+          padding: '1rem',
+          borderTop: '1px solid #d1d5db',
+          backgroundColor: '#e5e7eb'  // ← Même couleur pour éviter les transparences
+        }}>
+          {/* Informations utilisateur */}
+          {userInfo && (
+            <div style={{ 
+              marginBottom: '1rem', 
+              padding: '0.75rem',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              borderRadius: '0.5rem'
+            }}>
+              <p style={{ 
+                color: '#374151', 
+                fontSize: '0.875rem', 
+                margin: 0,
+                fontWeight: '500'
+              }}>
+                👋 {userInfo.firstName} {userInfo.lastName}
+              </p>
+              <p style={{ 
+                color: '#6b7280', 
+                fontSize: '0.75rem', 
+                margin: 0 
+              }}>
+                {userInfo.email}
+              </p>
+            </div>
+          )}
+          
+          {/* Bouton déconnexion - TOUJOURS VISIBLE */}
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              backgroundColor: '#ef4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#dc2626'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#ef4444'
+            }}
+          >
+            Déconnexion
+          </button>
         </div>
       </div>
 
@@ -516,20 +667,20 @@ export default function Dashboard() {
                 </div>
               )}
 
-              <button
-                onClick={handleCreateDocument}
-                disabled={createLoading || !newDocTitle.trim() || !newDocContent.trim()}
-                className="login-button"
-                style={{
-                  width: 'auto',
-                  padding: '0.75rem 2rem',
-                  fontSize: '1rem',
-                  opacity: (createLoading || !newDocTitle.trim() || !newDocContent.trim()) ? 0.5 : 1
-                }}
-              >
-                {createLoading ? 'Creating document...' : 'Generate doc'}
-              </button>
-            </div>
+                <button
+                  onClick={handleCreateDocument}
+                  disabled={createLoading || !newDocTitle.trim() || !newDocContent.trim()}
+                  className="login-button"
+                  style={{
+                    width: 'auto',
+                    padding: '0.75rem 2rem',
+                    fontSize: '1rem',
+                    opacity: (createLoading || !newDocTitle.trim() || !newDocContent.trim()) ? 0.5 : 1
+                  }}
+                >
+                  {createLoading ? 'Creating document...' : 'Generate doc'}
+                </button>
+              </div>
           </div>
         )}
 
@@ -565,10 +716,143 @@ export default function Dashboard() {
                 </button>
               </div>
             ) : (
-              <div>
-                <p>Liste des documents détaillée</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {documents.map(doc => (
+                  <div
+                    key={doc.id}
+                    style={{
+                      backgroundColor: 'white',
+                      padding: '1.5rem',
+                      borderRadius: '0.5rem',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      cursor: 'pointer',
+                      border: '1px solid #e5e7eb',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'
+                      e.currentTarget.style.borderColor = '#3b82f6'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'
+                      e.currentTarget.style.borderColor = '#e5e7eb'
+                    }}
+                    onClick={() => setSelectedDocument(doc)}
+                  >
+                    <h3 style={{ 
+                      fontSize: '1.125rem', 
+                      fontWeight: 'bold', 
+                      marginBottom: '0.5rem',
+                      color: '#111827'
+                    }}>
+                      {doc.title}
+                    </h3>
+                    <p style={{ 
+                      color: '#6b7280', 
+                      fontSize: '0.875rem',
+                      marginBottom: '0.5rem'
+                    }}>
+                      Créé le {new Date(doc.createdAt).toLocaleDateString('fr-FR')}
+                    </p>
+                    <p style={{ color: '#3b82f6', fontSize: '0.875rem', fontWeight: '500' }}>
+                      Cliquez pour lire →
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
+          </div>
+        )}
+
+        {selectedDocument && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '0.5rem',
+              padding: '2rem',
+              maxWidth: '800px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              position: 'relative'
+            }}>
+              {/* Header avec titre et bouton fermer */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.5rem',
+                borderBottom: '1px solid #e5e7eb',
+                paddingBottom: '1rem'
+              }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>
+                  {selectedDocument.title}
+                </h2>
+                <button
+                  onClick={closeDocumentView}
+                  style={{
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.25rem',
+                    padding: '0.5rem 1rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  ✕ Fermer
+                </button>
+              </div>
+
+              {/* Date de création */}
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                Créé le {new Date(selectedDocument.createdAt).toLocaleDateString('fr-FR', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </p>
+
+              {/* Contenu du document */}
+              <div style={{
+                backgroundColor: '#f9fafb',
+                padding: '1.5rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #e5e7eb'
+              }}>
+                {loadingContent ? (
+                  <p style={{ textAlign: 'center', color: '#6b7280' }}>
+                    Chargement du contenu...
+                  </p>
+                ) : contentError ? (
+                  <p style={{ color: '#ef4444', textAlign: 'center' }}>
+                    Erreur: {contentError}
+                  </p>
+                ) : (
+                  <div style={{
+                    whiteSpace: 'pre-wrap',
+                    lineHeight: '1.6',
+                    fontSize: '1rem',
+                    color: '#374151'
+                  }}>
+                    {documentContent}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
