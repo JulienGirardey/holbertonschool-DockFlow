@@ -66,15 +66,10 @@ export async function POST(
 		});
 
 		// simulate the AI generation
-		const generatedContent = `# ${document.title}
-
-		## Objective
+		const generatedContent = `
 		${document.objective}
 
-		## Content
-		${document.rawContent}
-
-		*This content has been structured by AI.*`;
+		${document.rawContent}`;
 
 		// save the generated document
 		const generatedDocument = await prisma.generatedDocument.create({

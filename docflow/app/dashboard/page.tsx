@@ -41,7 +41,7 @@ export default function Dashboard() {
   const [editLanguage, setEditLanguage] = useState('')
   const [editColorMode, setEditColorMode] = useState('')
   const [saveLoading, setSaveLoading] = useState(false)
-  const[saveError, setSaveError] = useState('')
+  const [saveError, setSaveError] = useState('')
 
   const [newDocTitle, setNewDocTitle] = useState('')
   const [newDocContent, setNewDocContent] = useState('')
@@ -62,6 +62,11 @@ export default function Dashboard() {
   const [isDirty, setIsDirty] = useState(false)
   const [lastSavedContent, setLastSavedContent] = useState('')
   const [lastSavedTitle, setLastSavedTitle] = useState('')
+
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [showAiGenerator, setShowAiGenerator] = useState(false)
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiError, setAiError] = useState('')
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -118,6 +123,40 @@ export default function Dashboard() {
       setError(err instanceof Error ? err.message : 'Error fetching documents')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const generateWithAI = async () => {
+    try {
+      setAiGenerating(true)
+      setAiError('')
+
+      const token = localStorage.getItem('token')
+      const response = await fetch(`/api/documents/${selectedDocument?.id}/generate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt: aiPrompt })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate with AI')
+      }
+
+      const generatedDoc = await response.json()
+
+      setEditedContent(generatedDoc.generatedContent || generatedDoc.content || generatedDoc.rawContent)
+      setShowAiGenerator(false)
+      setAiPrompt('')
+
+      setIsDirty(true)
+
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'AI generation failed')
+    } finally {
+      setAiGenerating(false)
     }
   }
 
@@ -242,7 +281,7 @@ export default function Dashboard() {
         objective: newDocTitle.trim(),
         rawContent: newDocContent.trim()
       }
-      
+
       console.log('Request data:', requestData)
 
       const response = await fetch('/api/documents', {
@@ -257,7 +296,7 @@ export default function Dashboard() {
       if (!response.ok) {
         const errorData = await response.json()
         console.log('API Error:', errorData)
-        
+
         if (response.status === 401) {
           localStorage.removeItem('token')
           router.push('/login')
@@ -271,7 +310,7 @@ export default function Dashboard() {
       setNewDocTitle('')
       setNewDocContent('')
       setActiveSection('documents')
-      
+
     } catch (err) {
       console.error('Creation error:', err)
       setCreateError(err instanceof Error ? err.message : 'Error creating document')
@@ -284,7 +323,7 @@ export default function Dashboard() {
     try {
       setLoadingContent(true)
       setContentError('')
-      
+
       const token = localStorage.getItem('token')
       if (!token) {
         router.push('/login')
@@ -309,7 +348,7 @@ export default function Dashboard() {
       const document = await response.json()
 
       setDocumentContent(document.rawContent || 'Aucun contenu disponible')
-      
+
     } catch (err) {
       setContentError(err instanceof Error ? err.message : 'Error fetching document')
     } finally {
@@ -436,9 +475,16 @@ export default function Dashboard() {
       const hasChanges = editedTitle !== lastSavedTitle || editedContent !== lastSavedContent
       setIsDirty(hasChanges)
 
-      if (hasChanges && editedTitle.trim() && editedContent.trim()) {
+      if (hasChanges &&
+        editedTitle.trim() &&
+        editedContent.trim() &&
+        Math.abs(editedContent.length - lastSavedTitle.length) > 5) {
+
         const autoSaveTimer = setTimeout(() => {
-          saveDocumentChanges(editedTitle, editedContent, true)
+          if (editedTitle.trim() !== lastSavedTitle.trim() ||
+            editedContent.trim() !== lastSavedContent.trim()) {
+            saveDocumentChanges(editedTitle, editedContent, true)
+          }
         }, 2000)
 
         return () => clearTimeout(autoSaveTimer)
@@ -457,9 +503,9 @@ export default function Dashboard() {
         position: 'sticky',
         top: 0
       }}>
-        
+
         {/* Navigation header */}
-        <div style={{ 
+        <div style={{
           padding: '1rem',
           borderBottom: '1px solid #d1d5db'
         }}>
@@ -497,23 +543,23 @@ export default function Dashboard() {
         </div>
 
         {/* scrollable document zone */}
-        <div style={{ 
-          flex: 1, 
+        <div style={{
+          flex: 1,
           padding: '1rem',
           overflow: 'auto',
           minHeight: 0
         }}>
-          <h3 style={{ 
-            color: '#374151', 
-            fontSize: '0.875rem', 
-            fontWeight: 'bold', 
+          <h3 style={{
+            color: '#374151',
+            fontSize: '0.875rem',
+            fontWeight: 'bold',
             marginBottom: '0.5rem',
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
           }}>
             Mes Documents
           </h3>
-          
+
           {loading ? (
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Chargement...</p>
           ) : error ? (
@@ -548,37 +594,37 @@ export default function Dashboard() {
         </div>
 
         {/* Fixe footer */}
-        <div style={{ 
+        <div style={{
           padding: '1rem',
           borderTop: '1px solid #d1d5db',
           backgroundColor: '#e5e7eb'
         }}>
           {/* Infos user */}
           {userInfo && (
-            <div style={{ 
-              marginBottom: '1rem', 
+            <div style={{
+              marginBottom: '1rem',
               padding: '0.75rem',
               backgroundColor: 'rgba(255,255,255,0.1)',
               borderRadius: '0.5rem'
             }}>
-              <p style={{ 
-                color: '#374151', 
-                fontSize: '0.875rem', 
+              <p style={{
+                color: '#374151',
+                fontSize: '0.875rem',
                 margin: 0,
                 fontWeight: '500'
               }}>
                 👋 {userInfo.firstName} {userInfo.lastName}
               </p>
-              <p style={{ 
-                color: '#6b7280', 
-                fontSize: '0.75rem', 
-                margin: 0 
+              <p style={{
+                color: '#6b7280',
+                fontSize: '0.75rem',
+                margin: 0
               }}>
                 {userInfo.email}
               </p>
             </div>
           )}
-          
+
           {/* disconnect button */}
           <button
             onClick={handleLogout}
@@ -691,7 +737,7 @@ export default function Dashboard() {
                       >
                         {saveLoading ? 'Sauvegarde...' : 'Sauvegarder'}
                       </button>
-                      
+
                       <button
                         onClick={cancelEdit}
                         disabled={saveLoading}
@@ -712,7 +758,7 @@ export default function Dashboard() {
                   <div>
                     <p>Language: {userSettings.language}</p>
                     <p>Color Mode: {userSettings.colorMode}</p>
-                    
+
                     <button
                       onClick={startEdit}
                       style={{
@@ -741,7 +787,7 @@ export default function Dashboard() {
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
               📝 Create New Document
             </h2>
-            
+
             <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
               <div style={{ marginBottom: '1.5rem' }}>
                 <input
@@ -780,32 +826,32 @@ export default function Dashboard() {
               </div>
 
               {createError && (
-                <div style={{ 
-                  marginBottom: '1rem', 
-                  padding: '0.75rem', 
-                  backgroundColor: '#fef2f2', 
-                  border: '1px solid #fca5a5', 
-                  color: '#dc2626', 
-                  borderRadius: '0.375rem' 
+                <div style={{
+                  marginBottom: '1rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fca5a5',
+                  color: '#dc2626',
+                  borderRadius: '0.375rem'
                 }}>
                   {createError}
                 </div>
               )}
 
-                <button
-                  onClick={handleCreateDocument}
-                  disabled={createLoading || !newDocTitle.trim() || !newDocContent.trim()}
-                  className="login-button"
-                  style={{
-                    width: 'auto',
-                    padding: '0.75rem 2rem',
-                    fontSize: '1rem',
-                    opacity: (createLoading || !newDocTitle.trim() || !newDocContent.trim()) ? 0.5 : 1
-                  }}
-                >
-                  {createLoading ? 'Creating document...' : 'Generate doc'}
-                </button>
-              </div>
+              <button
+                onClick={handleCreateDocument}
+                disabled={createLoading || !newDocTitle.trim() || !newDocContent.trim()}
+                className="login-button"
+                style={{
+                  width: 'auto',
+                  padding: '0.75rem 2rem',
+                  fontSize: '1rem',
+                  opacity: (createLoading || !newDocTitle.trim() || !newDocContent.trim()) ? 0.5 : 1
+                }}
+              >
+                {createLoading ? 'Creating document...' : 'Generate doc'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -864,16 +910,16 @@ export default function Dashboard() {
                     }}
                     onClick={() => setSelectedDocument(doc)}
                   >
-                    <h3 style={{ 
-                      fontSize: '1.125rem', 
-                      fontWeight: 'bold', 
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: 'bold',
                       marginBottom: '0.5rem',
                       color: '#111827'
                     }}>
                       {doc.title}
                     </h3>
-                    <p style={{ 
-                      color: '#6b7280', 
+                    <p style={{
+                      color: '#6b7280',
                       fontSize: '0.875rem',
                       marginBottom: '0.5rem'
                     }}>
@@ -944,7 +990,7 @@ export default function Dashboard() {
                     {selectedDocument.title}
                   </h2>
                 )}
-                
+
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   {/* auto-save indicator */}
                   {editingDocument && (
@@ -958,9 +1004,25 @@ export default function Dashboard() {
                       )}
                     </div>
                   )}
-                  
+
                   {editingDocument ? (
                     <>
+                      <button
+                        onClick={() => setShowAiGenerator(!showAiGenerator)}
+                        style={{
+                          backgroundColor: showAiGenerator ? '#8b5cf6' : '#a855f7',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.25rem',
+                          padding: '0.5rem 1rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        {showAiGenerator ? 'Fermer IA' : 'IA'}
+                      </button>
+
                       <button
                         onClick={saveAndExitEdit}
                         disabled={saveDocLoading}
@@ -1009,7 +1071,7 @@ export default function Dashboard() {
                       ✏️ Modifier
                     </button>
                   )}
-                  
+
                   <button
                     onClick={closeDocumentView}
                     style={{
@@ -1040,13 +1102,13 @@ export default function Dashboard() {
 
               {/* error message */}
               {saveDocError && (
-                <div style={{ 
-                  marginBottom: '1rem', 
-                  padding: '0.75rem', 
-                  backgroundColor: '#fef2f2', 
-                  border: '1px solid #fca5a5', 
-                  color: '#dc2626', 
-                  borderRadius: '0.375rem' 
+                <div style={{
+                  marginBottom: '1rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fca5a5',
+                  color: '#dc2626',
+                  borderRadius: '0.375rem'
                 }}>
                   {saveDocError}
                 </div>
@@ -1102,6 +1164,115 @@ export default function Dashboard() {
                 )}
               </div>
 
+              {/* Panel IA */}
+              {editingDocument && showAiGenerator && (
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  backgroundColor: '#f8fafc',
+                  border: '2px solid #8b5cf6',
+                  borderRadius: '0.5rem'
+                }}>
+                  <h4 style={{
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    color: '#7c3aed',
+                    marginBottom: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    🤖 Assistant IA
+                  </h4>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <textarea
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      placeholder="Décrivez ce que vous voulez que l'IA fasse... 
+                      Exemples :
+                      • Améliore ce texte
+                      • Fais un résumé en 3 points
+                      • Traduis en anglais
+                      • Rend le ton plus professionnel
+                      • Ajoute des exemples"
+                      rows={4}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem',
+                        backgroundColor: 'white',
+                        resize: 'vertical'
+                      }}
+                    />
+                  </div>
+
+                  {aiError && (
+                    <div style={{
+                      marginBottom: '1rem',
+                      padding: '0.75rem',
+                      backgroundColor: '#fef2f2',
+                      border: '1px solid #fca5a5',
+                      color: '#dc2626',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem'
+                    }}>
+                      ❌ {aiError}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <button
+                      onClick={generateWithAI}
+                      disabled={aiGenerating || !aiPrompt.trim()}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: aiGenerating ? '#9ca3af' : '#8b5cf6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.375rem',
+                        cursor: aiGenerating ? 'not-allowed' : 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: 'bold',
+                        opacity: (!aiPrompt.trim()) ? 0.5 : 1
+                      }}
+                    >
+                      {aiGenerating ? '🔄 Génération...' : '✨ Générer avec IA'}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowAiGenerator(false)
+                        setAiPrompt('')
+                        setAiError('')
+                      }}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      Annuler
+                    </button>
+                  </div>
+
+                  <div style={{
+                    marginTop: '0.75rem',
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    fontStyle: 'italic'
+                  }}>
+                    💡 L'IA remplacera votre contenu actuel. Sauvegardez d'abord si nécessaire !
+                  </div>
+                </div>
+              )}
+
               {/* edition help */}
               {editingDocument && (
                 <div style={{
@@ -1113,7 +1284,7 @@ export default function Dashboard() {
                   fontSize: '0.875rem',
                   color: '#1e40af'
                 }}>
-                  💡 <strong>Aide :</strong> Vos modifications sont sauvegardées automatiquement toutes les 2 secondes. 
+                  💡 <strong>Aide :</strong> Vos modifications sont sauvegardées automatiquement toutes les 2 secondes.
                   Utilisez "Sauvegarder" pour forcer la sauvegarde et quitter le mode édition.
                 </div>
               )}
