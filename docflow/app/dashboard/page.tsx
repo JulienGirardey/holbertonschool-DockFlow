@@ -59,6 +59,9 @@ export default function Dashboard() {
   const [saveDocLoading, setSaveDocLoading] = useState(false)
   const [saveDocError, setSaveDocError] = useState('')
   const [autoSaving, setAutoSaving] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
+  const [lastSavedContent, setLastSavedContent] = useState('')
+  const [lastSavedTitle, setLastSavedTitle] = useState('')
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -304,7 +307,8 @@ export default function Dashboard() {
       }
 
       const document = await response.json()
-      setDocumentContent(document.content || document.rawContent || 'Aucun contenu disponible')
+
+      setDocumentContent(document.rawContent || 'Aucun contenu disponible')
       
     } catch (err) {
       setContentError(err instanceof Error ? err.message : 'Error fetching document')
@@ -313,22 +317,44 @@ export default function Dashboard() {
     }
   }
 
-  // Fonction pour fermer la vue document
+
   const closeDocumentView = () => {
     setSelectedDocument(null)
     setDocumentContent('')
     setContentError('')
   }
 
+  // Delete this function as it's duplicated
+
+
+  const cancelEditDocument = () => {
+    setEditingDocument(false)
+    setEditedTitle('')
+    setEditedContent('')
+    setSaveDocError('')
+  }
+
+
+  const saveAndExitEdit = async () => {
+    await saveDocumentChanges(editedTitle, editedContent)
+    setEditingDocument(false)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    router.push('/login')
+  }
+
   const saveDocumentChanges = async (title: string, content: string, showAutoSave = false) => {
     try {
+      // Auto-save - no loading
       if (showAutoSave) {
         setAutoSaving(true)
       } else {
         setSaveDocLoading(true)
       }
       setSaveDocError('')
-      
+
       const token = localStorage.getItem('token')
       if (!token) {
         router.push('/login')
@@ -343,7 +369,8 @@ export default function Dashboard() {
         },
         body: JSON.stringify({
           title: title.trim(),
-          content: content.trim()
+          rawContent: content.trim(),
+          objective: title.trim()
         })
       })
 
@@ -353,76 +380,71 @@ export default function Dashboard() {
           router.push('/login')
           return
         }
-        throw new Error('Failed to save document')
+        // auto-save, skiped error
+        if (!showAutoSave) {
+          throw new Error('Failed to save document')
+        }
+        return
       }
 
       const updatedDoc = await response.json()
-      
-      // Mettre à jour la liste des documents
-      setDocuments(prev => prev.map(doc => 
+
+      setDocuments(prev => prev.map(doc =>
         doc.id === selectedDocument?.id ? { ...doc, title: updatedDoc.title } : doc
       ))
-      
-      // Mettre à jour le document sélectionné
+
       if (selectedDocument) {
         setSelectedDocument({ ...selectedDocument, title: updatedDoc.title })
       }
-      
-      // Mettre à jour le contenu affiché
-      setDocumentContent(content)
-      
+
+      setDocumentContent(updatedDoc.rawContent || content)
+
+      if (showAutoSave) {
+        setLastSavedContent(content)
+        setLastSavedTitle(title)
+        setIsDirty(false)
+      }
+
     } catch (err) {
-      setSaveDocError(err instanceof Error ? err.message : 'Error saving document')
+      if (!showAutoSave) {
+        setSaveDocError(err instanceof Error ? err.message : 'Error saving document')
+      }
     } finally {
       if (showAutoSave) {
-        setAutoSaving(false)
+        setTimeout(() => setAutoSaving(false), 500)
       } else {
         setSaveDocLoading(false)
       }
     }
   }
 
-  // Fonction pour commencer l'édition
   const startEditDocument = () => {
     if (selectedDocument) {
       setEditingDocument(true)
       setEditedTitle(selectedDocument.title)
       setEditedContent(documentContent)
       setSaveDocError('')
+
+      setLastSavedTitle(selectedDocument.title)
+      setLastSavedContent(documentContent)
+      setIsDirty(false)
     }
-  }
-
-  // Fonction pour annuler l'édition
-  const cancelEditDocument = () => {
-    setEditingDocument(false)
-    setEditedTitle('')
-    setEditedContent('')
-    setSaveDocError('')
-  }
-
-  // Fonction pour sauvegarder et quitter l'édition
-  const saveAndExitEdit = async () => {
-    await saveDocumentChanges(editedTitle, editedContent)
-    setEditingDocument(false)
-  }
-
-  const handleLogout = () => {
-    // Supprimer le token du localStorage
-    localStorage.removeItem('token')
-    
-    // Rediriger vers la page de login
-    router.push('/login')
   }
 
   useEffect(() => {
-    if (editingDocument && selectedDocument && (editedTitle || editedContent)) {
-      const autoSaveTimer = setTimeout(() => {
-        saveDocumentChanges(editedTitle, editedContent, true) // true = mode auto-save
-      }, 2000) // Auto-save après 2 secondes d'inactivité
+    if (editingDocument && selectedDocument) {
+      const hasChanges = editedTitle !== lastSavedTitle || editedContent !== lastSavedContent
+      setIsDirty(hasChanges)
 
-      return () => clearTimeout(autoSaveTimer)
+      if (hasChanges && editedTitle.trim() && editedContent.trim()) {
+        const autoSaveTimer = setTimeout(() => {
+          saveDocumentChanges(editedTitle, editedContent, true)
+        }, 2000)
+
+        return () => clearTimeout(autoSaveTimer)
+      }
     }
-  }, [editedTitle, editedContent, editingDocument])
+  }, [editedTitle, editedContent, editingDocument, lastSavedTitle, lastSavedContent])
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
@@ -431,12 +453,12 @@ export default function Dashboard() {
         backgroundColor: '#e5e7eb',
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',  // ← Hauteur fixe de l'écran
-        position: 'sticky', // ← Reste collée lors du scroll de la page
-        top: 0              // ← Collée en haut
+        height: '100vh',
+        position: 'sticky',
+        top: 0
       }}>
         
-        {/* Header de navigation - fixe */}
+        {/* Navigation header */}
         <div style={{ 
           padding: '1rem',
           borderBottom: '1px solid #d1d5db'
@@ -474,12 +496,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Zone scrollable pour les documents */}
+        {/* scrollable document zone */}
         <div style={{ 
           flex: 1, 
           padding: '1rem',
-          overflow: 'auto',  // ← Scroll interne seulement pour cette zone
-          minHeight: 0       // ← Permet au flex de se comprimer
+          overflow: 'auto',
+          minHeight: 0
         }}>
           <h3 style={{ 
             color: '#374151', 
@@ -525,13 +547,13 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Footer fixe avec user info + déconnexion */}
+        {/* Fixe footer */}
         <div style={{ 
           padding: '1rem',
           borderTop: '1px solid #d1d5db',
-          backgroundColor: '#e5e7eb'  // ← Même couleur pour éviter les transparences
+          backgroundColor: '#e5e7eb'
         }}>
-          {/* Informations utilisateur */}
+          {/* Infos user */}
           {userInfo && (
             <div style={{ 
               marginBottom: '1rem', 
@@ -557,7 +579,7 @@ export default function Dashboard() {
             </div>
           )}
           
-          {/* Bouton déconnexion - TOUJOURS VISIBLE */}
+          {/* disconnect button */}
           <button
             onClick={handleLogout}
             style={{
@@ -790,7 +812,7 @@ export default function Dashboard() {
         {activeSection === 'documents' && (
           <div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-              📋 My Documents ({documents.length})
+              📋 Mes Documents {documents.length}
             </h2>
 
             {documents.length === 0 ? (
@@ -890,7 +912,7 @@ export default function Dashboard() {
               overflow: 'auto',
               position: 'relative'
             }}>
-              {/* Header avec titre et boutons */}
+              {/* Header with title and button */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -924,15 +946,17 @@ export default function Dashboard() {
                 )}
                 
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  {/* Indicateur d'auto-save */}
-                  {autoSaving && (
-                    <span style={{ 
-                      fontSize: '0.75rem', 
-                      color: '#10b981',
-                      fontWeight: 'bold'
-                    }}>
-                      ⟳ Sauvegarde...
-                    </span>
+                  {/* auto-save indicator */}
+                  {editingDocument && (
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      {autoSaving ? (
+                        <span style={{ color: '#10b981' }}>💾 Sauvegarde...</span>
+                      ) : isDirty ? (
+                        <span style={{ color: '#ef4444' }}>● Non sauvegardé</span>
+                      ) : (
+                        <span style={{ color: '#10b981' }}>✓ Sauvegardé</span>
+                      )}
+                    </div>
                   )}
                   
                   {editingDocument ? (
@@ -1003,7 +1027,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Date de création */}
+              {/* creation date */}
               <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
                 Créé le {new Date(selectedDocument.createdAt).toLocaleDateString('fr-FR', {
                   year: 'numeric',
@@ -1014,7 +1038,7 @@ export default function Dashboard() {
                 })}
               </p>
 
-              {/* Message d'erreur */}
+              {/* error message */}
               {saveDocError && (
                 <div style={{ 
                   marginBottom: '1rem', 
@@ -1028,7 +1052,7 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Contenu du document */}
+              {/* doc content */}
               <div style={{
                 backgroundColor: '#f9fafb',
                 border: '1px solid #e5e7eb',
@@ -1044,7 +1068,7 @@ export default function Dashboard() {
                     Erreur: {contentError}
                   </p>
                 ) : editingDocument ? (
-                  // MODE ÉDITION - Textarea
+                  // edition mode
                   <textarea
                     value={editedContent}
                     onChange={(e) => setEditedContent(e.target.value)}
@@ -1065,7 +1089,7 @@ export default function Dashboard() {
                     placeholder="Commencez à écrire votre contenu..."
                   />
                 ) : (
-                  // MODE LECTURE
+                  // Reading mode
                   <div style={{
                     padding: '1.5rem',
                     whiteSpace: 'pre-wrap',
@@ -1078,7 +1102,7 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Aide pour l'édition */}
+              {/* edition help */}
               {editingDocument && (
                 <div style={{
                   marginTop: '1rem',
