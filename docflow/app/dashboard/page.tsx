@@ -7,7 +7,7 @@ interface Document {
   id: string
   title: string
   createdAt: string
-  content?: string  // ← Ajoutez cette ligne pour le contenu
+  content?: string
 }
 
 interface UserSettings {
@@ -52,6 +52,16 @@ export default function Dashboard() {
   const [documentContent, setDocumentContent] = useState('')
   const [loadingContent, setLoadingContent] = useState(false)
   const [contentError, setContentError] = useState('')
+
+  const [editingDocument, setEditingDocument] = useState(false)
+  const [editedTitle, setEditedTitle] = useState('')
+  const [editedContent, setEditedContent] = useState('')
+  const [saveDocLoading, setSaveDocLoading] = useState(false)
+  const [saveDocError, setSaveDocError] = useState('')
+  const [autoSaving, setAutoSaving] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
+  const [lastSavedContent, setLastSavedContent] = useState('')
+  const [lastSavedTitle, setLastSavedTitle] = useState('')
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -297,7 +307,8 @@ export default function Dashboard() {
       }
 
       const document = await response.json()
-      setDocumentContent(document.content || document.rawContent || 'Aucun contenu disponible')
+
+      setDocumentContent(document.rawContent || 'Aucun contenu disponible')
       
     } catch (err) {
       setContentError(err instanceof Error ? err.message : 'Error fetching document')
@@ -306,20 +317,134 @@ export default function Dashboard() {
     }
   }
 
-  // Fonction pour fermer la vue document
+
   const closeDocumentView = () => {
     setSelectedDocument(null)
     setDocumentContent('')
     setContentError('')
   }
 
+  // Delete this function as it's duplicated
+
+
+  const cancelEditDocument = () => {
+    setEditingDocument(false)
+    setEditedTitle('')
+    setEditedContent('')
+    setSaveDocError('')
+  }
+
+
+  const saveAndExitEdit = async () => {
+    await saveDocumentChanges(editedTitle, editedContent)
+    setEditingDocument(false)
+  }
+
   const handleLogout = () => {
-    // Supprimer le token du localStorage
     localStorage.removeItem('token')
-    
-    // Rediriger vers la page de login
     router.push('/login')
   }
+
+  const saveDocumentChanges = async (title: string, content: string, showAutoSave = false) => {
+    try {
+      // Auto-save - no loading
+      if (showAutoSave) {
+        setAutoSaving(true)
+      } else {
+        setSaveDocLoading(true)
+      }
+      setSaveDocError('')
+
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/login')
+        return
+      }
+
+      const response = await fetch(`/api/documents/${selectedDocument?.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: title.trim(),
+          rawContent: content.trim(),
+          objective: title.trim()
+        })
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token')
+          router.push('/login')
+          return
+        }
+        // auto-save, skiped error
+        if (!showAutoSave) {
+          throw new Error('Failed to save document')
+        }
+        return
+      }
+
+      const updatedDoc = await response.json()
+
+      setDocuments(prev => prev.map(doc =>
+        doc.id === selectedDocument?.id ? { ...doc, title: updatedDoc.title } : doc
+      ))
+
+      if (selectedDocument) {
+        setSelectedDocument({ ...selectedDocument, title: updatedDoc.title })
+      }
+
+      setDocumentContent(updatedDoc.rawContent || content)
+
+      if (showAutoSave) {
+        setLastSavedContent(content)
+        setLastSavedTitle(title)
+        setIsDirty(false)
+      }
+
+    } catch (err) {
+      if (!showAutoSave) {
+        setSaveDocError(err instanceof Error ? err.message : 'Error saving document')
+      }
+    } finally {
+      if (showAutoSave) {
+        setTimeout(() => setAutoSaving(false), 500)
+      } else {
+        setSaveDocLoading(false)
+      }
+    }
+  }
+
+  const startEditDocument = () => {
+    if (selectedDocument) {
+      setEditingDocument(true)
+      setEditedTitle(selectedDocument.title)
+      setEditedContent(documentContent)
+      setSaveDocError('')
+
+      setLastSavedTitle(selectedDocument.title)
+      setLastSavedContent(documentContent)
+      setIsDirty(false)
+    }
+  }
+
+  useEffect(() => {
+    if (editingDocument && selectedDocument) {
+      const hasChanges = editedTitle !== lastSavedTitle || editedContent !== lastSavedContent
+      setIsDirty(hasChanges)
+
+      if (hasChanges && editedTitle.trim() && editedContent.trim()) {
+        const autoSaveTimer = setTimeout(() => {
+          saveDocumentChanges(editedTitle, editedContent, true)
+        }, 2000)
+
+        return () => clearTimeout(autoSaveTimer)
+      }
+    }
+  }, [editedTitle, editedContent, editingDocument, lastSavedTitle, lastSavedContent])
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
@@ -328,12 +453,12 @@ export default function Dashboard() {
         backgroundColor: '#e5e7eb',
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',  // ← Hauteur fixe de l'écran
-        position: 'sticky', // ← Reste collée lors du scroll de la page
-        top: 0              // ← Collée en haut
+        height: '100vh',
+        position: 'sticky',
+        top: 0
       }}>
         
-        {/* Header de navigation - fixe */}
+        {/* Navigation header */}
         <div style={{ 
           padding: '1rem',
           borderBottom: '1px solid #d1d5db'
@@ -371,12 +496,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Zone scrollable pour les documents */}
+        {/* scrollable document zone */}
         <div style={{ 
           flex: 1, 
           padding: '1rem',
-          overflow: 'auto',  // ← Scroll interne seulement pour cette zone
-          minHeight: 0       // ← Permet au flex de se comprimer
+          overflow: 'auto',
+          minHeight: 0
         }}>
           <h3 style={{ 
             color: '#374151', 
@@ -422,13 +547,13 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Footer fixe avec user info + déconnexion */}
+        {/* Fixe footer */}
         <div style={{ 
           padding: '1rem',
           borderTop: '1px solid #d1d5db',
-          backgroundColor: '#e5e7eb'  // ← Même couleur pour éviter les transparences
+          backgroundColor: '#e5e7eb'
         }}>
-          {/* Informations utilisateur */}
+          {/* Infos user */}
           {userInfo && (
             <div style={{ 
               marginBottom: '1rem', 
@@ -454,7 +579,7 @@ export default function Dashboard() {
             </div>
           )}
           
-          {/* Bouton déconnexion - TOUJOURS VISIBLE */}
+          {/* disconnect button */}
           <button
             onClick={handleLogout}
             style={{
@@ -687,7 +812,7 @@ export default function Dashboard() {
         {activeSection === 'documents' && (
           <div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-              📋 My Documents ({documents.length})
+              📋 Mes Documents {documents.length}
             </h2>
 
             {documents.length === 0 ? (
@@ -781,13 +906,13 @@ export default function Dashboard() {
               backgroundColor: 'white',
               borderRadius: '0.5rem',
               padding: '2rem',
-              maxWidth: '800px',
-              width: '90%',
-              maxHeight: '80vh',
+              maxWidth: '900px',
+              width: '95%',
+              maxHeight: '90vh',
               overflow: 'auto',
               position: 'relative'
             }}>
-              {/* Header avec titre et bouton fermer */}
+              {/* Header with title and button */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -796,26 +921,113 @@ export default function Dashboard() {
                 borderBottom: '1px solid #e5e7eb',
                 paddingBottom: '1rem'
               }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>
-                  {selectedDocument.title}
-                </h2>
-                <button
-                  onClick={closeDocumentView}
-                  style={{
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.25rem',
-                    padding: '0.5rem 1rem',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem'
-                  }}
-                >
-                  ✕ Fermer
-                </button>
+                {editingDocument ? (
+                  <input
+                    type="text"
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    style={{
+                      fontSize: '1.5rem',
+                      fontWeight: 'bold',
+                      color: '#111827',
+                      border: '2px solid #3b82f6',
+                      borderRadius: '0.25rem',
+                      padding: '0.5rem',
+                      backgroundColor: '#eff6ff',
+                      flex: 1,
+                      marginRight: '1rem'
+                    }}
+                    placeholder="Titre du document"
+                  />
+                ) : (
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>
+                    {selectedDocument.title}
+                  </h2>
+                )}
+                
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  {/* auto-save indicator */}
+                  {editingDocument && (
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      {autoSaving ? (
+                        <span style={{ color: '#10b981' }}>💾 Sauvegarde...</span>
+                      ) : isDirty ? (
+                        <span style={{ color: '#ef4444' }}>● Non sauvegardé</span>
+                      ) : (
+                        <span style={{ color: '#10b981' }}>✓ Sauvegardé</span>
+                      )}
+                    </div>
+                  )}
+                  
+                  {editingDocument ? (
+                    <>
+                      <button
+                        onClick={saveAndExitEdit}
+                        disabled={saveDocLoading}
+                        style={{
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.25rem',
+                          padding: '0.5rem 1rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        {saveDocLoading ? 'Sauvegarde...' : '💾 Sauvegarder'}
+                      </button>
+                      <button
+                        onClick={cancelEditDocument}
+                        style={{
+                          backgroundColor: '#6b7280',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.25rem',
+                          padding: '0.5rem 1rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        Annuler
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={startEditDocument}
+                      style={{
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.25rem',
+                        padding: '0.5rem 1rem',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      ✏️ Modifier
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={closeDocumentView}
+                    style={{
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.25rem',
+                      padding: '0.5rem 1rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    ✕ Fermer
+                  </button>
+                </div>
               </div>
 
-              {/* Date de création */}
+              {/* creation date */}
               <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
                 Créé le {new Date(selectedDocument.createdAt).toLocaleDateString('fr-FR', {
                   year: 'numeric',
@@ -826,23 +1038,60 @@ export default function Dashboard() {
                 })}
               </p>
 
-              {/* Contenu du document */}
+              {/* error message */}
+              {saveDocError && (
+                <div style={{ 
+                  marginBottom: '1rem', 
+                  padding: '0.75rem', 
+                  backgroundColor: '#fef2f2', 
+                  border: '1px solid #fca5a5', 
+                  color: '#dc2626', 
+                  borderRadius: '0.375rem' 
+                }}>
+                  {saveDocError}
+                </div>
+              )}
+
+              {/* doc content */}
               <div style={{
                 backgroundColor: '#f9fafb',
-                padding: '1.5rem',
+                border: '1px solid #e5e7eb',
                 borderRadius: '0.5rem',
-                border: '1px solid #e5e7eb'
+                minHeight: '400px'
               }}>
                 {loadingContent ? (
-                  <p style={{ textAlign: 'center', color: '#6b7280' }}>
+                  <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
                     Chargement du contenu...
                   </p>
                 ) : contentError ? (
-                  <p style={{ color: '#ef4444', textAlign: 'center' }}>
+                  <p style={{ color: '#ef4444', textAlign: 'center', padding: '2rem' }}>
                     Erreur: {contentError}
                   </p>
+                ) : editingDocument ? (
+                  // edition mode
+                  <textarea
+                    value={editedContent}
+                    onChange={(e) => setEditedContent(e.target.value)}
+                    style={{
+                      width: '100%',
+                      minHeight: '400px',
+                      padding: '1.5rem',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '1rem',
+                      lineHeight: '1.6',
+                      color: '#374151',
+                      backgroundColor: 'white',
+                      resize: 'vertical',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                    placeholder="Commencez à écrire votre contenu..."
+                  />
                 ) : (
+                  // Reading mode
                   <div style={{
+                    padding: '1.5rem',
                     whiteSpace: 'pre-wrap',
                     lineHeight: '1.6',
                     fontSize: '1rem',
@@ -852,6 +1101,22 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
+
+              {/* edition help */}
+              {editingDocument && (
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.875rem',
+                  color: '#1e40af'
+                }}>
+                  💡 <strong>Aide :</strong> Vos modifications sont sauvegardées automatiquement toutes les 2 secondes. 
+                  Utilisez "Sauvegarder" pour forcer la sauvegarde et quitter le mode édition.
+                </div>
+              )}
             </div>
           </div>
         )}
