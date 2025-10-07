@@ -16,13 +16,16 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.16.2",
     "@types/jsonwebtoken": "^9.0.10",
     "bcryptjs": "^3.0.2",
+    "groq-sdk": "^0.33.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.544.0",
     "next": "15.5.4",
+    "openai": "^6.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.63.0",
