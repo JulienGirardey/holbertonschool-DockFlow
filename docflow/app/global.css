@@ -896,3 +896,309 @@ body {
 .mb-4 {
   margin-bottom: 1rem;
 }
+
+/* ✅ AJOUT - Styles pour la page LOGIN */
+
+.login-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--gray-50), var(--summer-sand), var(--gray-100));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.login-card {
+  background: linear-gradient(135deg, white, var(--gray-50));
+  border: 2px solid var(--primary-200);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-2xl);
+  box-shadow: var(--shadow-xl);
+  max-width: 400px;
+  width: 100%;
+  transition: var(--transition-normal);
+}
+
+.login-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--primary-300);
+}
+
+.login-title {
+  font-size: var(--text-3xl);
+  font-weight: bold;
+  color: var(--gray-900);
+  text-align: center;
+  margin-bottom: var(--space-sm);
+}
+
+.login-subtitle {
+  color: var(--gray-600);
+  text-align: center;
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-2xl);
+}
+
+.login-icon-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-lg);
+  
+  /* ✅ Variables personnalisables */
+  --icon-size: 80px;          /* Taille du rond */
+  --icon-inner-size: 32px;    /* Taille de l'icône */
+  --icon-border-width: 3px;   /* Épaisseur de la bordure */
+}
+
+.login-icon-bg {
+  background: linear-gradient(135deg, var(--primary-100), var(--summer-sand));
+  border: var(--icon-border-width) solid var(--primary-200);
+  border-radius: 50%;
+  transition: var(--transition-fast);
+  
+  /* Dimensions et centrage parfait */
+  width: var(--icon-size);
+  height: var(--icon-size);
+  min-width: var(--icon-size);
+  min-height: var(--icon-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Force le cercle parfait */
+  aspect-ratio: 1/1;
+  flex-shrink: 0;
+  
+  /* Centrage parfait du contenu */
+  position: relative;
+}
+
+.login-icon-bg:hover {
+  background: linear-gradient(135deg, var(--primary-200), var(--primary-300));
+  transform: scale(1.08);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-400);
+}
+
+.login-icon-bg svg {
+  width: var(--icon-inner-size) !important;
+  height: var(--icon-inner-size) !important;
+  color: var(--primary-600);
+  transition: var(--transition-fast);
+  
+  /* Centrage absolu au pixel près */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.login-icon-bg:hover svg {
+  color: var(--primary-700);
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+/* ✅ VARIANTES DE TAILLE - Ajoutez ces classes pour personnaliser */
+.login-icon-container.small {
+  --icon-size: 64px;
+  --icon-inner-size: 24px;
+  --icon-border-width: 2px;
+}
+
+.login-icon-container.large {
+  --icon-size: 96px;
+  --icon-inner-size: 40px;
+  --icon-border-width: 4px;
+}
+
+.login-icon-container.xl {
+  --icon-size: 120px;
+  --icon-inner-size: 48px;
+  --icon-border-width: 5px;
+}
+
+.login-form-title {
+  text-align: center;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-lg);
+}
+
+.login-input {
+  width: 100%;
+  padding: var(--space-md);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, white, var(--gray-50));
+  font-size: var(--text-base);
+  transition: var(--transition-fast);
+  color: var(--gray-900);
+}
+
+.login-input:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1);
+}
+
+.login-input:hover {
+  border-color: var(--primary-300);
+}
+
+.login-input::placeholder {
+  color: var(--gray-500);
+}
+
+.login-error {
+  margin-bottom: var(--space-md);
+  padding: var(--space-md);
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border: 2px solid var(--error-500);
+  color: #dc2626;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+}
+
+.field-error {
+  margin-top: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--error-500);
+  font-weight: 500;
+}
+
+.forgot-link {
+  text-align: right;
+  margin: var(--space-md) 0;
+}
+
+.forgot-link a {
+  font-size: var(--text-sm);
+  color: var(--gray-600);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.forgot-link a:hover {
+  color: var(--primary-600);
+  text-decoration: underline;
+}
+
+.login-button {
+  width: 100%;
+  background: linear-gradient(135deg, var(--primary-500), var(--summer-coral));
+  color: white;
+  padding: var(--space-md);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  box-shadow: var(--shadow-md);
+}
+
+.login-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.login-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Styles pour les espaces entre les champs */
+.space-y-4 > * + * {
+  margin-top: var(--space-md);
+}
+
+.space-y-8 > * + * {
+  margin-top: var(--space-2xl);
+}
+
+/* ✅ DARK MODE pour LOGIN */
+.dark .login-container {
+  background: var(--gray-50) !important;
+}
+
+.dark .login-card {
+  background: var(--gray-100) !important;
+  border-color: var(--gray-200) !important;
+}
+
+.dark .login-title,
+.dark .login-form-title {
+  color: var(--gray-900) !important;
+}
+
+.dark .login-subtitle {
+  color: var(--gray-600) !important;
+}
+
+.dark .login-icon-bg {
+  background: var(--gray-200) !important;
+  border-color: var(--gray-300) !important;
+}
+
+.dark .login-input {
+  background: var(--gray-200) !important;
+  border-color: var(--gray-300) !important;
+  color: var(--gray-900) !important;
+}
+
+.dark .login-input:focus {
+  border-color: var(--primary-500) !important;
+  background: var(--gray-200) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+.dark .login-input::placeholder {
+  color: var(--gray-500) !important;
+}
+
+.dark .login-button {
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600)) !important;
+}
+
+.dark .login-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-700)) !important;
+}
+
+.dark .forgot-link a {
+  color: var(--gray-600) !important;
+}
+
+.dark .forgot-link a:hover {
+  color: var(--primary-400) !important;
+}
+
+/* ✅ AJOUT - Style pour le bouton back */
+.back-button:hover {
+  background: var(--gray-100) !important;
+  border-color: var(--primary-300) !important;
+  color: var(--primary-700) !important;
+  transform: translateX(-2px);
+}
+
+.dark .back-button {
+  border-color: var(--gray-300) !important;
+  color: var(--gray-700) !important;
+}
+
+.dark .back-button:hover {
+  background: var(--gray-200) !important;
+  border-color: var(--primary-400) !important;
+  color: var(--primary-400) !important;
+}
