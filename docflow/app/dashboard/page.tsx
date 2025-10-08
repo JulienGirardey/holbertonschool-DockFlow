@@ -68,6 +68,9 @@ export default function Dashboard() {
   const [aiGenerating, setAiGenerating] = useState(false)
   const [aiError, setAiError] = useState('')
 
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) {
@@ -457,6 +460,51 @@ export default function Dashboard() {
     }
   }
 
+  const handleDeleteClick = (documentId: string) => {
+    setDeleteConfirm(documentId)
+  }
+
+  const handleCancelDelete = () => {
+    setDeleteConfirm(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/documents/${deleteConfirm}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+
+      if (response.ok) {
+        setDocuments(documents.filter(doc => doc.id !== deleteConfirm))
+
+        if (selectedDocument?.id === deleteConfirm) {
+          setSelectedDocument(null)
+          setDocumentContent('')
+        }
+
+        setDeleteConfirm(null)
+
+        console.log('Document supprimé avec succès')
+
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || 'Erreur lors de la suppress')
+      }
+    } catch (error) {
+      console.error('Delete error:', error)
+      setError('Erreur lors de la suppression du document')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   const startEditDocument = () => {
     if (selectedDocument) {
       setEditingDocument(true)
@@ -570,25 +618,92 @@ export default function Dashboard() {
             </p>
           ) : (
             documents.map(doc => (
-              <button
+              <div
                 key={doc.id}
-                onClick={() => setActiveSection('documents')}
                 style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: '#93c5fd',
-                  color: 'white',
-                  border: 'none',
+                  backgroundColor: 'white',
+                  padding: '1.5rem',
                   borderRadius: '0.5rem',
-                  marginBottom: '0.5rem',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: '0.875rem'
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  border: '1px solid #e5e7eb',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'
+                  e.currentTarget.style.borderColor = '#3b82f6'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'
+                  e.currentTarget.style.borderColor = '#e5e7eb'
                 }}
               >
-                📄 {doc.title.length > 20 ? doc.title.substring(0, 20) + '...' : doc.title}
-              </button>
+                {/* ✅ CONTENU CLIQUABLE POUR OUVRIR */}
+                <div 
+                  onClick={() => setSelectedDocument(doc)}
+                  style={{ cursor: 'pointer', flex: 1 }}
+                >
+                  <h3 style={{
+                    fontSize: '1.125rem',
+                    fontWeight: 'bold',
+                    marginBottom: '0.5rem',
+                    color: '#111827'
+                  }}>
+                    {doc.title}
+                  </h3>
+                  <p style={{
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Créé le {new Date(doc.createdAt).toLocaleDateString('fr-FR')}
+                  </p>
+                  <p style={{ color: '#3b82f6', fontSize: '0.875rem', fontWeight: '500' }}>
+                    Cliquez pour lire →
+                  </p>
+                </div>
+
+                {/* ✅ BOUTONS SÉPARÉS */}
+                <div style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                  marginTop: '1rem',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <button
+                    onClick={() => setSelectedDocument(doc)}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500'
+                    }}
+                  >
+                    📄 Ouvrir
+                  </button>
+                  
+                  <button
+                    onClick={() => handleDeleteClick(doc.id)}
+                    style={{
+                      padding: '0.5rem',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      minWidth: '40px'
+                    }}
+                    title="Supprimer le document"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
             ))
           )}
         </div>
@@ -896,7 +1011,6 @@ export default function Dashboard() {
                       padding: '1.5rem',
                       borderRadius: '0.5rem',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      cursor: 'pointer',
                       border: '1px solid #e5e7eb',
                       transition: 'all 0.2s'
                     }}
@@ -908,26 +1022,73 @@ export default function Dashboard() {
                       e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'
                       e.currentTarget.style.borderColor = '#e5e7eb'
                     }}
-                    onClick={() => setSelectedDocument(doc)}
                   >
-                    <h3 style={{
-                      fontSize: '1.125rem',
-                      fontWeight: 'bold',
-                      marginBottom: '0.5rem',
-                      color: '#111827'
+                    {/* ✅ CONTENU CLIQUABLE POUR OUVRIR */}
+                    <div 
+                      onClick={() => setSelectedDocument(doc)}
+                      style={{ cursor: 'pointer', flex: 1 }}
+                    >
+                      <h3 style={{
+                        fontSize: '1.125rem',
+                        fontWeight: 'bold',
+                        marginBottom: '0.5rem',
+                        color: '#111827'
+                      }}>
+                        {doc.title}
+                      </h3>
+                      <p style={{
+                        color: '#6b7280',
+                        fontSize: '0.875rem',
+                        marginBottom: '0.5rem'
+                      }}>
+                        Créé le {new Date(doc.createdAt).toLocaleDateString('fr-FR')}
+                      </p>
+                      <p style={{ color: '#3b82f6', fontSize: '0.875rem', fontWeight: '500' }}>
+                        Cliquez pour lire →
+                      </p>
+                    </div>
+
+                    {/* ✅ BOUTONS SÉPARÉS */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '0.5rem',
+                      marginTop: '1rem',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
                     }}>
-                      {doc.title}
-                    </h3>
-                    <p style={{
-                      color: '#6b7280',
-                      fontSize: '0.875rem',
-                      marginBottom: '0.5rem'
-                    }}>
-                      Créé le {new Date(doc.createdAt).toLocaleDateString('fr-FR')}
-                    </p>
-                    <p style={{ color: '#3b82f6', fontSize: '0.875rem', fontWeight: '500' }}>
-                      Cliquez pour lire →
-                    </p>
+                      <button
+                        onClick={() => setSelectedDocument(doc)}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '500'
+                        }}
+                      >
+                        📄 Ouvrir
+                      </button>
+                      
+                      <button
+                        onClick={() => handleDeleteClick(doc.id)}
+                        style={{
+                          padding: '0.5rem',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          minWidth: '40px'
+                        }}
+                        title="Supprimer le document"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1291,7 +1452,118 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+        {/* DELETE MODAL */}
+        {deleteConfirm && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '0.5rem',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              maxWidth: '400px',
+              width: '90%'
+            }}>
+              <div style={{
+                textAlign: 'center',
+                marginBottom: '1.5rem'
+              }}>
+                <div style={{
+                  fontSize: '3rem',
+                  marginBottom: '1rem'
+                }}>
+                  ⚠️
+                </div>
+                <h3 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 'bold',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Supprimer ce document ?
+                </h3>
+                <p style={{
+                  color: '#6b7280',
+                  fontSize: '0.875rem'
+                }}>
+                  Cette action est irréversible. Le document "{documents.find(d => d.id === deleteConfirm)?.title}" sera définitivement supprimé.
+                </p>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '0.75rem',
+                justifyContent: 'center'
+              }}>
+                <button
+                  onClick={handleCancelDelete}
+                  disabled={isDeleting}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: isDeleting ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    opacity: isDeleting ? 0.5 : 1
+                  }}
+                >
+                  Annuler
+                </button>
+                
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: isDeleting ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    opacity: isDeleting ? 0.5 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  {isDeleting ? (
+                    <>
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid transparent',
+                        borderTop: '2px solid white',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }}></div>
+                      Suppression...
+                    </>
+                  ) : (
+                    <>
+                      🗑️ Supprimer
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }
