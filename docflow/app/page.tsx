@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import PageTransition from './components/PageTransition';
 import ThemeToggle from './components/ThemeToggle';
 
 export default function HomePage() {
@@ -18,7 +17,7 @@ export default function HomePage() {
   };
 
   return (
-    <PageTransition>
+    <div className="animate-fadeInUp">
       <div className="page-container">
         {/* Header Navigation */}
         <header className="header-container" style={{
@@ -259,6 +258,6 @@ export default function HomePage() {
           </p>
         </footer>
       </div>
-    </PageTransition>
+    </div>
   );
 }

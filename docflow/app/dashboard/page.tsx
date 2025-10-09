@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import ThemeToggle from '../components/ThemeToggle'
+import LoadingScreen from '../components/LoadingScreen'
 
 interface Document {
   id: string
@@ -23,17 +25,21 @@ interface User {
 
 export default function Dashboard() {
   const [documents, setDocuments] = useState<Document[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [activeSection, setActiveSection] = useState<'profile' | 'create' | 'documents'>('documents')
+  const [sidebarLoading, setSidebarLoading] = useState(true)
+  const [sidebarError, setSidebarError] = useState('')
+  const [activeSection, setActiveSection] = useState<'profile' | 'create' | 'documents' | 'document'>('documents')
+
+  // ✅ States séparés pour chaque section
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const [createLoading, setCreateLoading] = useState(false)
+  const [createError, setCreateError] = useState('')
+  const [documentsLoading, setDocumentsLoading] = useState(false)
+  const [documentsError, setDocumentsError] = useState('')
 
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null)
-  const [profilLoading, setProfileLoading] = useState(false)
-  const [profileError, setProfileError] = useState('')
-
   const [userInfo, setUserInfo] = useState<User | null>(null)
-  const [userLoading, setUserLoading] = useState(false)
-  const [userError, setUserError] = useState('')
+  const [userLoading, setUserLoading] = useState(true)
 
   const router = useRouter()
 
@@ -45,8 +51,6 @@ export default function Dashboard() {
 
   const [newDocTitle, setNewDocTitle] = useState('')
   const [newDocContent, setNewDocContent] = useState('')
-  const [createLoading, setCreateLoading] = useState(false)
-  const [createError, setCreateError] = useState('')
 
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
   const [documentContent, setDocumentContent] = useState('')
@@ -70,7 +74,29 @@ export default function Dashboard() {
 
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
+  // ✅ Nouveau state pour contrôler l'animation de la section main uniquement
+  const [mainContentKey, setMainContentKey] = useState(0)
+
+  // ✅ Chargement initial - sidebar uniquement
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+    
+    // Charger données sidebar en parallèle
+    Promise.all([
+      fetchDocumentsForSidebar(),
+      fetchUserInfo()
+    ]).finally(() => {
+      setSidebarLoading(false)
+    })
+  }, [])
+
+  // ✅ Chargement conditionnel selon la section active
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) {
@@ -78,37 +104,65 @@ export default function Dashboard() {
       return
     }
 
-    fetchDocuments()
-  }, [])
-
-  useEffect(() => {
-    if (activeSection === 'profile') {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        router.push('/login')
-        return
-      }
-
-      setProfileLoading(true)
-      fetchUserSettings()
-      fetchUserInfo()
+    // Charger les données selon la section active
+    switch (activeSection) {
+      case 'profile':
+        if (!userSettings) {
+          setProfileLoading(true)
+          fetchUserSettings().finally(() => setProfileLoading(false))
+        }
+        break
+      
+      case 'documents':
+        if (documents.length === 0 && !documentsLoading) {
+          setDocumentsLoading(true)
+          fetchDocuments().finally(() => setDocumentsLoading(false))
+        }
+        break
+      
+      case 'create':
+        // Pas de chargement nécessaire pour create
+        break
     }
   }, [activeSection])
 
+  // ✅ Chargement document spécifique
   useEffect(() => {
     if (selectedDocument) {
       fetchDocumentContent(selectedDocument.id)
+      setActiveSection('document')
     }
   }, [selectedDocument])
 
-  const fetchDocuments = async () => {
+  // ✅ Auto-save effect
+  useEffect(() => {
+    if (editingDocument && selectedDocument) {
+      const hasChanges = editedTitle !== lastSavedTitle || editedContent !== lastSavedContent
+      setIsDirty(hasChanges)
+
+      if (hasChanges &&
+        editedTitle.trim() &&
+        editedContent.trim() &&
+        Math.abs(editedContent.length - lastSavedContent.length) > 5) {
+
+        const autoSaveTimer = setTimeout(() => {
+          if (editedTitle.trim() !== lastSavedTitle.trim() ||
+            editedContent.trim() !== lastSavedContent.trim()) {
+            saveDocumentChanges(editedTitle, editedContent, true)
+          }
+        }, 2000)
+
+        return () => clearTimeout(autoSaveTimer)
+      }
+    }
+  }, [editedTitle, editedContent, editingDocument, lastSavedTitle, lastSavedContent])
+
+  // ✅ Fonction pour charger seulement les documents pour la sidebar (légère)
+  const fetchDocumentsForSidebar = async () => {
     try {
       const token = localStorage.getItem('token')
-
-      const response = await fetch('/api/documents', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await fetch('/api/documents?lite=true', {
+        headers: { 'Authorization': `Bearer ${token}` }
       })
 
       if (!response.ok) {
@@ -123,54 +177,42 @@ export default function Dashboard() {
       const docs = await response.json()
       setDocuments(docs)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error fetching documents')
-    } finally {
-      setLoading(false)
+      setSidebarError(err instanceof Error ? err.message : 'Error fetching documents')
     }
   }
 
-  const generateWithAI = async () => {
+  // ✅ Fonction pour charger tous les documents (section documents)
+  const fetchDocuments = async () => {
     try {
-      setAiGenerating(true)
-      setAiError('')
-
+      setDocumentsError('')
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/documents/${selectedDocument?.id}/generate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ prompt: aiPrompt })
+      const response = await fetch('/api/documents', {
+        headers: { 'Authorization': `Bearer ${token}` }
       })
 
       if (!response.ok) {
-        throw new Error('Failed to generate with AI')
+        if (response.status === 401) {
+          localStorage.removeItem('token')
+          router.push('/login')
+          return
+        }
+        throw new Error('Failed to fetch documents')
       }
 
-      const generatedDoc = await response.json()
-
-      setEditedContent(generatedDoc.generatedContent || generatedDoc.content || generatedDoc.rawContent)
-      setShowAiGenerator(false)
-      setAiPrompt('')
-
-      setIsDirty(true)
-
+      const docs = await response.json()
+      setDocuments(docs)
     } catch (err) {
-      setAiError(err instanceof Error ? err.message : 'AI generation failed')
-    } finally {
-      setAiGenerating(false)
+      setDocumentsError(err instanceof Error ? err.message : 'Error fetching documents')
     }
   }
 
+  // fetch users settings
   const fetchUserSettings = async () => {
     try {
+      setProfileError('')
       const token = localStorage.getItem('token')
-
       const response = await fetch('/api/settings', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       })
 
       if (!response.ok) {
@@ -181,24 +223,20 @@ export default function Dashboard() {
         }
         throw new Error('Failed to fetch settings')
       }
+      
       const settings = await response.json()
       setUserSettings(settings)
     } catch (err) {
       setProfileError(err instanceof Error ? err.message : 'Error fetching settings')
-    } finally {
-      setProfileLoading(false)
     }
   }
 
+  // fetch user info
   const fetchUserInfo = async () => {
     try {
-      setUserLoading(true)
       const token = localStorage.getItem('token')
-
       const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       })
 
       if (!response.ok) {
@@ -207,18 +245,19 @@ export default function Dashboard() {
           router.push('/login')
           return
         }
-        throw new Error('Failed to fetch settings')
+        throw new Error('Failed to fetch user info')
       }
 
       const userInfoData = await response.json()
       setUserInfo(userInfoData)
     } catch (err) {
-      setUserError(err instanceof Error ? err.message : 'Error fetching user info')
+      console.error('Error fetching user info:', err)
     } finally {
       setUserLoading(false)
     }
   }
 
+  // save user settings
   const saveUserSettings = async () => {
     try {
       setSaveLoading(true)
@@ -259,6 +298,7 @@ export default function Dashboard() {
     }
   }
 
+  // handle button action
   const cancelEdit = () => {
     setEditingSettings(false)
     setEditLanguage(userSettings?.language || '')
@@ -272,20 +312,18 @@ export default function Dashboard() {
     setEditColorMode(userSettings?.colorMode || '')
   }
 
+  // create document
   const handleCreateDocument = async () => {
     try {
       setCreateLoading(true)
       setCreateError('')
 
       const token = localStorage.getItem('token')
-
       const requestData = {
         title: newDocTitle.trim(),
         objective: newDocTitle.trim(),
         rawContent: newDocContent.trim()
       }
-
-      console.log('Request data:', requestData)
 
       const response = await fetch('/api/documents', {
         method: 'POST',
@@ -298,8 +336,6 @@ export default function Dashboard() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        console.log('API Error:', errorData)
-
         if (response.status === 401) {
           localStorage.removeItem('token')
           router.push('/login')
@@ -312,16 +348,16 @@ export default function Dashboard() {
       setDocuments(prev => [newDocument, ...prev])
       setNewDocTitle('')
       setNewDocContent('')
-      setActiveSection('documents')
+      handleSectionChange('documents')
 
     } catch (err) {
-      console.error('Creation error:', err)
       setCreateError(err instanceof Error ? err.message : 'Error creating document')
     } finally {
       setCreateLoading(false)
     }
   }
 
+  // fetch document content
   const fetchDocumentContent = async (documentId: string) => {
     try {
       setLoadingContent(true)
@@ -349,7 +385,6 @@ export default function Dashboard() {
       }
 
       const document = await response.json()
-
       setDocumentContent(document.rawContent || 'Aucun contenu disponible')
 
     } catch (err) {
@@ -359,16 +394,6 @@ export default function Dashboard() {
     }
   }
 
-
-  const closeDocumentView = () => {
-    setSelectedDocument(null)
-    setDocumentContent('')
-    setContentError('')
-  }
-
-  // Delete this function as it's duplicated
-
-
   const cancelEditDocument = () => {
     setEditingDocument(false)
     setEditedTitle('')
@@ -376,20 +401,13 @@ export default function Dashboard() {
     setSaveDocError('')
   }
 
-
   const saveAndExitEdit = async () => {
     await saveDocumentChanges(editedTitle, editedContent)
     setEditingDocument(false)
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    router.push('/login')
-  }
-
   const saveDocumentChanges = async (title: string, content: string, showAutoSave = false) => {
     try {
-      // Auto-save - no loading
       if (showAutoSave) {
         setAutoSaving(true)
       } else {
@@ -422,7 +440,6 @@ export default function Dashboard() {
           router.push('/login')
           return
         }
-        // auto-save, skiped error
         if (!showAutoSave) {
           throw new Error('Failed to save document')
         }
@@ -490,16 +507,15 @@ export default function Dashboard() {
         }
 
         setDeleteConfirm(null)
-
         console.log('Document supprimé avec succès')
 
       } else {
         const errorData = await response.json()
-        setError(errorData.error || 'Erreur lors de la suppress')
+        setDeleteError(errorData.error || 'Erreur lors de la suppression')
       }
     } catch (error) {
       console.error('Delete error:', error)
-      setError('Erreur lors de la suppression du document')
+      setDeleteError('Erreur lors de la suppression du document')
     } finally {
       setIsDeleting(false)
     }
@@ -518,572 +534,566 @@ export default function Dashboard() {
     }
   }
 
-  useEffect(() => {
-    if (editingDocument && selectedDocument) {
-      const hasChanges = editedTitle !== lastSavedTitle || editedContent !== lastSavedContent
-      setIsDirty(hasChanges)
+  // ✅ Fonction AI corrigée
+  const generateWithAI = async () => {
+    try {
+      setAiGenerating(true)
+      setAiError('')
 
-      if (hasChanges &&
-        editedTitle.trim() &&
-        editedContent.trim() &&
-        Math.abs(editedContent.length - lastSavedTitle.length) > 5) {
-
-        const autoSaveTimer = setTimeout(() => {
-          if (editedTitle.trim() !== lastSavedTitle.trim() ||
-            editedContent.trim() !== lastSavedContent.trim()) {
-            saveDocumentChanges(editedTitle, editedContent, true)
-          }
-        }, 2000)
-
-        return () => clearTimeout(autoSaveTimer)
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/login')
+        return
       }
+
+      const response = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          content: editedContent
+        })
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token')
+          router.push('/login')
+          return
+        }
+        throw new Error('Failed to generate content')
+      }
+
+      const data = await response.json()
+      setEditedContent(data.generatedContent)
+      setAiPrompt('')
+      setShowAiGenerator(false)
+
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Error generating content')
+    } finally {
+      setAiGenerating(false)
     }
-  }, [editedTitle, editedContent, editingDocument, lastSavedTitle, lastSavedContent])
+  }
 
-  return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <div style={{
-        width: '250px',
-        backgroundColor: '#e5e7eb',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        position: 'sticky',
-        top: 0
-      }}>
-
-        {/* Navigation header */}
+  // ✅ Composant Loading pour les différentes sections
+  const SectionLoading = ({ message = "Chargement..." }: { message?: string }) => (
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      minHeight: '300px',
+      color: 'var(--gray-600)'
+    }}>
+      <div style={{ textAlign: 'center' }}>
         <div style={{
-          padding: '1rem',
-          borderBottom: '1px solid #d1d5db'
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <button
-              onClick={() => setActiveSection('profile')}
-              style={{
-                padding: '0.75rem 1rem',
-                backgroundColor: activeSection === 'profile' ? '#3b82f6' : '#93c5fd',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              👤 Profile
-            </button>
-
-            <button
-              onClick={() => setActiveSection('create')}
-              style={{
-                padding: '0.75rem 1rem',
-                backgroundColor: activeSection === 'create' ? '#3b82f6' : '#93c5fd',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              📝 Create Doc
-            </button>
-          </div>
-        </div>
-
-        {/* scrollable document zone */}
-        <div style={{
-          flex: 1,
-          padding: '1rem',
-          overflow: 'auto',
-          minHeight: 0
-        }}>
-          <h3 style={{
-            color: '#374151',
-            fontSize: '0.875rem',
-            fontWeight: 'bold',
-            marginBottom: '0.5rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em'
-          }}>
-            Mes Documents
-          </h3>
-
-          {loading ? (
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Chargement...</p>
-          ) : error ? (
-            <p style={{ color: 'red', fontSize: '0.875rem' }}>Erreur: {error}</p>
-          ) : documents.length === 0 ? (
-            <p style={{ color: '#6b7280', fontSize: '0.875rem', fontStyle: 'italic' }}>
-              Aucun document
-            </p>
-          ) : (
-            documents.map(doc => (
-              <div
-                key={doc.id}
-                style={{
-                  backgroundColor: 'white',
-                  padding: '1.5rem',
-                  borderRadius: '0.5rem',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                  border: '1px solid #e5e7eb',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'
-                  e.currentTarget.style.borderColor = '#3b82f6'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'
-                  e.currentTarget.style.borderColor = '#e5e7eb'
-                }}
-              >
-                {/* ✅ CONTENU CLIQUABLE POUR OUVRIR */}
-                <div 
-                  onClick={() => setSelectedDocument(doc)}
-                  style={{ cursor: 'pointer', flex: 1 }}
-                >
-                  <h3 style={{
-                    fontSize: '1.125rem',
-                    fontWeight: 'bold',
-                    marginBottom: '0.5rem',
-                    color: '#111827'
-                  }}>
-                    {doc.title}
-                  </h3>
-                  <p style={{
-                    color: '#6b7280',
-                    fontSize: '0.875rem',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Créé le {new Date(doc.createdAt).toLocaleDateString('fr-FR')}
-                  </p>
-                  <p style={{ color: '#3b82f6', fontSize: '0.875rem', fontWeight: '500' }}>
-                    Cliquez pour lire →
-                  </p>
-                </div>
-
-                {/* ✅ BOUTONS SÉPARÉS */}
-                <div style={{
-                  display: 'flex',
-                  gap: '0.5rem',
-                  marginTop: '1rem',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <button
-                    onClick={() => setSelectedDocument(doc)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '500'
-                    }}
-                  >
-                    📄 Ouvrir
-                  </button>
-                  
-                  <button
-                    onClick={() => handleDeleteClick(doc.id)}
-                    style={{
-                      padding: '0.5rem',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      minWidth: '40px'
-                    }}
-                    title="Supprimer le document"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Fixe footer */}
-        <div style={{
-          padding: '1rem',
-          borderTop: '1px solid #d1d5db',
-          backgroundColor: '#e5e7eb'
-        }}>
-          {/* Infos user */}
-          {userInfo && (
-            <div style={{
-              marginBottom: '1rem',
-              padding: '0.75rem',
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              borderRadius: '0.5rem'
-            }}>
-              <p style={{
-                color: '#374151',
-                fontSize: '0.875rem',
-                margin: 0,
-                fontWeight: '500'
-              }}>
-                👋 {userInfo.firstName} {userInfo.lastName}
-              </p>
-              <p style={{
-                color: '#6b7280',
-                fontSize: '0.75rem',
-                margin: 0
-              }}>
-                {userInfo.email}
-              </p>
-            </div>
-          )}
-
-          {/* disconnect button */}
-          <button
-            onClick={handleLogout}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              backgroundColor: '#ef4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '0.875rem',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#dc2626'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#ef4444'
-            }}
-          >
-            Déconnexion
-          </button>
-        </div>
+          width: '40px',
+          height: '40px',
+          border: '4px solid var(--gray-200)',
+          borderTop: '4px solid var(--primary-600)',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          margin: '0 auto var(--space-md)'
+        }}></div>
+        🔄 {message}
       </div>
+    </div>
+  )
 
-      <div style={{ flex: 1, padding: '2rem' }}>
-        {activeSection === 'profile' && (
+  // ✅ Fonction modifiée pour changer de section avec animation isolée
+  const handleSectionChange = (section: 'profile' | 'create' | 'documents' | 'document') => {
+    if (activeSection === 'document' && section !== 'document') {
+      setSelectedDocument(null)
+      setDocumentContent('')
+      setContentError('')
+      setEditingDocument(false)
+      setShowAiGenerator(false)
+    }
+    
+    setActiveSection(section)
+    setMainContentKey(prev => prev + 1)
+  }
+
+  // ✅ Fonction modifiée pour sélectionner un document avec animation isolée
+  const handleDocumentSelect = (doc: Document) => {
+    setSelectedDocument(doc)
+    setMainContentKey(prev => prev + 1)
+  }
+
+  // ✅ Fonction modifiée pour retourner aux documents avec animation isolée
+  const backToDocuments = () => {
+    setSelectedDocument(null)
+    setDocumentContent('')
+    setContentError('')
+    setEditingDocument(false)
+    setShowAiGenerator(false)
+    setActiveSection('documents')
+    setMainContentKey(prev => prev + 1)
+  }
+
+  // ✅ Composant MainContent avec transition CSS simple
+  const MainContent = () => {
+    return (
+      <div key={mainContentKey} style={{ 
+        width: '100%', 
+        height: '100%',
+        animation: 'fadeInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+      }}>
+        
+        {/* ✅ Document View */}
+        {activeSection === 'document' && selectedDocument && (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-              👤 Profile
-            </h2>
+            {/* Header avec bouton retour */}
+            <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+              <button
+                onClick={backToDocuments}
+                className="back-button auth-button-outline"
+                style={{ padding: 'var(--space-sm)', minWidth: 'auto' }}
+              >
+                ← Retour
+              </button>
+              
+              {editingDocument ? (
+                <input
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  className="modal-title-input"
+                  placeholder="Titre du document"
+                  style={{ fontSize: 'var(--text-2xl)', fontWeight: 'bold' }}
+                />
+              ) : (
+                <h2 className="section-title" style={{ margin: 0 }}>
+                  📄 {selectedDocument.title}
+                </h2>
+              )}
 
-            {(profilLoading || userLoading) ? (
-              <p>Chargement du profil...</p>
-            ) : (profileError || userError) ? (
-              <div>
-                {profileError && <p style={{ color: 'red' }}>Erreur settings: {profileError}</p>}
-                {userError && <p style={{ color: 'red' }}>Erreur user: {userError}</p>}
-              </div>
-            ) : (userSettings && userInfo) ? (
-              <div>
-                <h3 style={{ fontWeight: 'bold', marginBottom: '1rem' }}>👤 Informations personnelles</h3>
-                <p>First Name: {userInfo.firstName}</p>
-                <p>Last Name: {userInfo.lastName}</p>
-                <p>Email: {userInfo.email}</p>
-
-                <h3 style={{ fontWeight: 'bold', margin: '2rem 0 1rem 0' }}>⚙️ Paramètres</h3>
-
-                {editingSettings ? (
-                  <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '0.5rem' }}>
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                        Language:
-                      </label>
-                      <select
-                        value={editLanguage}
-                        onChange={(e) => setEditLanguage(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '0.5rem',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '0.25rem'
-                        }}
-                      >
-                        <option value="en">English</option>
-                        <option value="fr">Français</option>
-                        <option value="es">Español</option>
-                      </select>
-                    </div>
-
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                        Color Mode:
-                      </label>
-                      <select
-                        value={editColorMode}
-                        onChange={(e) => setEditColorMode(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '0.5rem',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '0.25rem'
-                        }}
-                      >
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
-                      </select>
-                    </div>
-
-                    {saveError && (
-                      <p style={{ color: 'red', marginBottom: '1rem' }}>
-                        Erreur: {saveError}
-                      </p>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+                {editingDocument && (
+                  <div className="save-indicator">
+                    {autoSaving ? (
+                      <span className="saving">💾 Sauvegarde...</span>
+                    ) : isDirty ? (
+                      <span className="dirty">● Non sauvegardé</span>
+                    ) : (
+                      <span className="saved">✅ Sauvegardé</span>
                     )}
-
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button
-                        onClick={saveUserSettings}
-                        disabled={saveLoading}
-                        style={{
-                          padding: '0.5rem 1rem',
-                          backgroundColor: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {saveLoading ? 'Sauvegarde...' : 'Sauvegarder'}
-                      </button>
-
-                      <button
-                        onClick={cancelEdit}
-                        disabled={saveLoading}
-                        style={{
-                          padding: '0.5rem 1rem',
-                          backgroundColor: '#6b7280',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Annuler
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <p>Language: {userSettings.language}</p>
-                    <p>Color Mode: {userSettings.colorMode}</p>
-
-                    <button
-                      onClick={startEdit}
-                      style={{
-                        marginTop: '1rem',
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.25rem',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Modifier les paramètres
-                    </button>
                   </div>
                 )}
+
+                {editingDocument ? (
+                  <>
+                    <button
+                      onClick={() => setShowAiGenerator(!showAiGenerator)}
+                      className="auth-button-outline"
+                      style={{
+                        background: showAiGenerator
+                          ? 'linear-gradient(135deg, #8b5cf6, #a855f7)'
+                          : 'var(--gray-100)',
+                        color: showAiGenerator ? 'white' : 'var(--gray-700)'
+                      }}
+                    >
+                      {showAiGenerator ? '🤖 Fermer IA' : '🤖 Assistant IA'}
+                    </button>
+
+                    <button
+                      onClick={saveAndExitEdit}
+                      disabled={saveDocLoading}
+                      className="cta-button"
+                      style={{ width: 'auto' }}
+                    >
+                      {saveDocLoading ? '🔄 Sauvegarde...' : '💾 Sauvegarder'}
+                    </button>
+
+                    <button
+                      onClick={cancelEditDocument}
+                      className="auth-button-outline"
+                    >
+                      ❌ Annuler
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={startEditDocument}
+                    className="auth-button-primary"
+                  >
+                    ✏️ Modifier
+                  </button>
+                )}
               </div>
-            ) : (
-              <p>Aucune donnée disponible</p>
+            </div>
+
+            {/* Date */}
+            <p style={{
+              color: 'var(--gray-600)',
+              fontSize: 'var(--text-sm)',
+              marginBottom: 'var(--space-lg)'
+            }}>
+              📅 Créé le {new Date(selectedDocument.createdAt).toLocaleDateString('fr-FR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </p>
+
+            {/* Erreur */}
+            {saveDocError && (
+              <div className="error-message">
+                ❌ {saveDocError}
+              </div>
+            )}
+
+            {/* Panel IA */}
+            {editingDocument && showAiGenerator && (
+              <div className="ai-panel" style={{ marginBottom: 'var(--space-lg)' }}>
+                <h4 className="ai-title">
+                  🤖 Assistant IA DocFlow
+                </h4>
+
+                <textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="🎯 Que voulez-vous faire avec l'IA ?
+
+Exemples :
+• Améliore ce texte pour le rendre plus professionnel
+• Fais un résumé en 3 points clés  
+• Traduis ce texte en anglais
+• Rend le ton plus dynamique et engageant
+• Ajoute des exemples concrets
+• Réécris avec un style plus formel"
+                  rows={4}
+                  className="ai-textarea"
+                />
+
+                {aiError && (
+                  <div className="error-message">
+                    ❌ {aiError}
+                  </div>
+                )}
+
+                <div className="ai-actions">
+                  <button
+                    onClick={generateWithAI}
+                    disabled={aiGenerating || !aiPrompt.trim()}
+                    className="cta-button"
+                    style={{
+                      width: 'auto',
+                      opacity: (!aiPrompt.trim()) ? 0.5 : 1
+                    }}
+                  >
+                    {aiGenerating ? '🔄 Génération...' : '✨ Générer avec IA'}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowAiGenerator(false)
+                      setAiPrompt('')
+                      setAiError('')
+                    }}
+                    className="auth-button-outline"
+                  >
+                    ❌ Fermer
+                  </button>
+                </div>
+
+                <div className="ai-help-text">
+                  💡 L'IA remplacera votre contenu actuel. Sauvegardez d'abord si nécessaire !
+                </div>
+              </div>
+            )}
+
+            {/* Contenu du document */}
+            <div className="document-content-area">
+              {loadingContent ? (
+                <p style={{ textAlign: 'center', color: 'var(--gray-600)', padding: 'var(--space-2xl)' }}>
+                  🔄 Chargement du contenu...
+                </p>
+              ) : contentError ? (
+                <p style={{ color: '#ef4444', textAlign: 'center', padding: 'var(--space-2xl)' }}>
+                  ❌ {contentError}
+                </p>
+              ) : editingDocument ? (
+                <textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  className="content-textarea"
+                  placeholder="✍️ Commencez à écrire votre contenu..."
+                  style={{ minHeight: '400px' }}
+                />
+              ) : (
+                <div className="content-display" style={{ minHeight: '400px' }}>
+                  {documentContent}
+                </div>
+              )}
+            </div>
+
+            {/* Aide édition */}
+            {editingDocument && (
+              <div className="edit-help">
+                💡 <strong>Mode édition:</strong> Vos modifications sont sauvegardées automatiquement toutes les 2 secondes.
+                Cliquez sur "Sauvegarder" pour forcer la sauvegarde et quitter le mode édition.
+              </div>
             )}
           </div>
         )}
 
-        {activeSection === 'create' && (
+        {/* ✅ Profile Section avec loading isolé */}
+        {activeSection === 'profile' && (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-              📝 Create New Document
-            </h2>
+            <div className="section-header">
+              <h2 className="section-title">👤 Mon Profil</h2>
+            </div>
 
-            <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <input
-                  type="text"
-                  placeholder="put your task"
-                  value={newDocTitle}
-                  onChange={(e) => setNewDocTitle(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    backgroundColor: '#f9fafb',
-                    fontSize: '1rem'
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '1.5rem' }}>
-                <textarea
-                  placeholder="text area where past your text"
-                  value={newDocContent}
-                  onChange={(e) => setNewDocContent(e.target.value)}
-                  rows={10}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    backgroundColor: '#f9fafb',
-                    fontSize: '1rem',
-                    resize: 'vertical',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              </div>
-
-              {createError && (
-                <div style={{
-                  marginBottom: '1rem',
-                  padding: '0.75rem',
-                  backgroundColor: '#fef2f2',
-                  border: '1px solid #fca5a5',
-                  color: '#dc2626',
-                  borderRadius: '0.375rem'
-                }}>
-                  {createError}
+            <div className="profile-content">
+              {profileLoading ? (
+                <SectionLoading message="Chargement du profil..." />
+              ) : profileError ? (
+                <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
+                  <p style={{ color: '#ef4444' }}>❌ {profileError}</p>
+                  <button 
+                    onClick={() => {
+                      setProfileLoading(true)
+                      fetchUserSettings().finally(() => setProfileLoading(false))
+                    }}
+                    className="auth-button-primary"
+                    style={{ marginTop: 'var(--space-md)' }}
+                  >
+                    🔄 Réessayer
+                  </button>
                 </div>
-              )}
+              ) : (userSettings && userInfo) ? (
+                <div>
+                  <div className="profile-section">
+                    <h3 className="profile-section-title">
+                      🙋‍♂️ Informations personnelles
+                    </h3>
+                    <p><strong>Prénom:</strong> {userInfo.firstName}</p>
+                    <p><strong>Nom:</strong> {userInfo.lastName}</p>
+                    <p><strong>Email:</strong> {userInfo.email}</p>
+                  </div>
 
-              <button
-                onClick={handleCreateDocument}
-                disabled={createLoading || !newDocTitle.trim() || !newDocContent.trim()}
-                className="login-button"
-                style={{
-                  width: 'auto',
-                  padding: '0.75rem 2rem',
-                  fontSize: '1rem',
-                  opacity: (createLoading || !newDocTitle.trim() || !newDocContent.trim()) ? 0.5 : 1
-                }}
-              >
-                {createLoading ? 'Creating document...' : 'Generate doc'}
-              </button>
+                  <div className="profile-section">
+                    <h3 className="profile-section-title">
+                      ⚙️ Paramètres de l'application
+                    </h3>
+
+                    {editingSettings ? (
+                      <div className="settings-form">
+                        <div className="form-group">
+                          <label className="form-label">
+                            🌐 Langue:
+                          </label>
+                          <select
+                            value={editLanguage}
+                            onChange={(e) => setEditLanguage(e.target.value)}
+                            className="form-select"
+                          >
+                            <option value="en">🇺🇸 English</option>
+                            <option value="fr">🇫🇷 Français</option>
+                            <option value="es">🇪🇸 Español</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label">
+                            🎨 Mode couleur:
+                          </label>
+                          <select
+                            value={editColorMode}
+                            onChange={(e) => setEditColorMode(e.target.value)}
+                            className="form-select"
+                          >
+                            <option value="light">☀️ Clair</option>
+                            <option value="dark">🌙 Sombre</option>
+                          </select>
+                        </div>
+
+                        {saveError && (
+                          <div className="error-message">
+                            ❌ {saveError}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                          <button
+                            onClick={saveUserSettings}
+                            disabled={saveLoading}
+                            className="cta-button"
+                            style={{ width: 'auto' }}
+                          >
+                            {saveLoading ? '🔄 Sauvegarde...' : '💾 Sauvegarder'}
+                          </button>
+
+                          <button
+                            onClick={cancelEdit}
+                            disabled={saveLoading}
+                            className="auth-button-outline"
+                          >
+                            ❌ Annuler
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p><strong>Langue:</strong> {userSettings.language === 'fr' ? '🇫🇷 Français' : userSettings.language === 'en' ? '🇺🇸 English' : '🇪🇸 Español'}</p>
+                        <p><strong>Mode:</strong> {userSettings.colorMode === 'light' ? '☀️ Clair' : '🌙 Sombre'}</p>
+
+                        <button
+                          onClick={startEdit}
+                          className="auth-button-primary"
+                          style={{ marginTop: 'var(--space-lg)' }}
+                        >
+                          ✏️ Modifier les paramètres
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <SectionLoading message="Initialisation du profil..." />
+              )}
             </div>
           </div>
         )}
 
-        {activeSection === 'documents' && (
+        {/* ✅ Create Section */}
+        {activeSection === 'create' && (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-              📋 Mes Documents {documents.length}
-            </h2>
+            <div className="section-header">
+              <h2 className="section-title">📝 Créer un nouveau document</h2>
+            </div>
 
-            {documents.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '3rem',
-                backgroundColor: 'white',
-                borderRadius: '0.5rem'
-              }}>
-                <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '1rem' }}>
-                  Vous n'avez pas encore de documents
-                </p>
+            <div className="create-content">
+              {createError && (
+                <div className="error-message">❌ {createError}</div>
+              )}
+
+              <form className="create-form" onSubmit={(e) => { e.preventDefault(); handleCreateDocument(); }}>
+                <div>
+                  <input
+                    type="text"
+                    placeholder="🎯 Titre de votre document..."
+                    value={newDocTitle}
+                    onChange={(e) => setNewDocTitle(e.target.value)}
+                    className="create-input"
+                  />
+                </div>
+
+                <div>
+                  <textarea
+                    placeholder="📝 Contenu de votre document... 
+
+Conseil: Décrivez votre idée, notre IA l'améliorera pour vous !"
+                    value={newDocContent}
+                    onChange={(e) => setNewDocContent(e.target.value)}
+                    className="create-textarea"
+                    rows={12}
+                  />
+                </div>
+
                 <button
-                  onClick={() => setActiveSection('create')}
+                  type="submit"
+                  disabled={createLoading || !newDocTitle.trim() || !newDocContent.trim()}
+                  className="cta-button"
                   style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontWeight: 'bold'
+                    width: 'auto',
+                    alignSelf: 'flex-start',
+                    opacity: (createLoading || !newDocTitle.trim() || !newDocContent.trim()) ? 0.5 : 1
                   }}
                 >
-                  Créer votre premier document
+                  {createLoading ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid transparent',
+                        borderTop: '2px solid white',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }}></div>
+                      Création en cours...
+                    </span>
+                  ) : '🚀 Générer le document'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ✅ Documents Section avec loading isolé */}
+        {activeSection === 'documents' && (
+          <div>
+            <div className="section-header">
+              <h2 className="section-title">Mes Documents ({documents.length})</h2>
+            </div>
+
+            {documentsLoading ? (
+              <SectionLoading message="Chargement des documents..." />
+            ) : documentsError ? (
+              <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
+                <p style={{ color: '#ef4444' }}>❌ {documentsError}</p>
+                <button 
+                  onClick={() => {
+                    setDocumentsLoading(true)
+                    fetchDocuments().finally(() => setDocumentsLoading(false))
+                  }}
+                  className="auth-button-primary"
+                  style={{ marginTop: 'var(--space-md)' }}
+                >
+                  🔄 Réessayer
+                </button>
+              </div>
+            ) : documents.length === 0 ? (
+              <div className="empty-state">
+                <div style={{ fontSize: '4rem', marginBottom: 'var(--space-lg)' }}>📄</div>
+                <p className="empty-state-text">Vous n'avez pas encore de documents</p>
+                <button
+                  onClick={() => handleSectionChange('create')}
+                  className="cta-button"
+                >
+                  ✨ Créer votre premier document
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="documents-grid">
                 {documents.map(doc => (
-                  <div
-                    key={doc.id}
-                    style={{
-                      backgroundColor: 'white',
-                      padding: '1.5rem',
-                      borderRadius: '0.5rem',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      border: '1px solid #e5e7eb',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'
-                      e.currentTarget.style.borderColor = '#3b82f6'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'
-                      e.currentTarget.style.borderColor = '#e5e7eb'
-                    }}
-                  >
-                    {/* ✅ CONTENU CLIQUABLE POUR OUVRIR */}
-                    <div 
-                      onClick={() => setSelectedDocument(doc)}
+                  <div key={doc.id} className="document-card">
+                    <div
+                      onClick={() => handleDocumentSelect(doc)}
                       style={{ cursor: 'pointer', flex: 1 }}
                     >
-                      <h3 style={{
-                        fontSize: '1.125rem',
-                        fontWeight: 'bold',
-                        marginBottom: '0.5rem',
-                        color: '#111827'
-                      }}>
+                      <h3 className="document-title">
                         {doc.title}
                       </h3>
-                      <p style={{
-                        color: '#6b7280',
-                        fontSize: '0.875rem',
-                        marginBottom: '0.5rem'
-                      }}>
-                        Créé le {new Date(doc.createdAt).toLocaleDateString('fr-FR')}
+                      <p className="document-date">
+                        📅 Créé le {new Date(doc.createdAt).toLocaleDateString('fr-FR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
                       </p>
-                      <p style={{ color: '#3b82f6', fontSize: '0.875rem', fontWeight: '500' }}>
-                        Cliquez pour lire →
+                      <p className="document-preview-text">
+                        Cliquer pour lire et modifier
                       </p>
                     </div>
 
-                    {/* ✅ BOUTONS SÉPARÉS */}
-                    <div style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      marginTop: '1rem',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
+                    <div className="document-actions">
                       <button
-                        onClick={() => setSelectedDocument(doc)}
-                        style={{
-                          padding: '0.5rem 1rem',
-                          backgroundColor: '#3b82f6',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.375rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: '500'
-                        }}
+                        onClick={() => handleDocumentSelect(doc)}
+                        className="doc-action-btn doc-open-btn"
                       >
-                        📄 Ouvrir
+                        📖 Ouvrir
                       </button>
-                      
+
                       <button
                         onClick={() => handleDeleteClick(doc.id)}
-                        style={{
-                          padding: '0.5rem',
-                          backgroundColor: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.375rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          minWidth: '40px'
-                        }}
+                        className="doc-action-btn doc-delete-btn"
                         title="Supprimer le document"
                       >
                         🗑️
@@ -1095,475 +1105,207 @@ export default function Dashboard() {
             )}
           </div>
         )}
-
-        {selectedDocument && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '0.5rem',
-              padding: '2rem',
-              maxWidth: '900px',
-              width: '95%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              position: 'relative'
-            }}>
-              {/* Header with title and button */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem',
-                borderBottom: '1px solid #e5e7eb',
-                paddingBottom: '1rem'
-              }}>
-                {editingDocument ? (
-                  <input
-                    type="text"
-                    value={editedTitle}
-                    onChange={(e) => setEditedTitle(e.target.value)}
-                    style={{
-                      fontSize: '1.5rem',
-                      fontWeight: 'bold',
-                      color: '#111827',
-                      border: '2px solid #3b82f6',
-                      borderRadius: '0.25rem',
-                      padding: '0.5rem',
-                      backgroundColor: '#eff6ff',
-                      flex: 1,
-                      marginRight: '1rem'
-                    }}
-                    placeholder="Titre du document"
-                  />
-                ) : (
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>
-                    {selectedDocument.title}
-                  </h2>
-                )}
-
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  {/* auto-save indicator */}
-                  {editingDocument && (
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                      {autoSaving ? (
-                        <span style={{ color: '#10b981' }}>💾 Sauvegarde...</span>
-                      ) : isDirty ? (
-                        <span style={{ color: '#ef4444' }}>● Non sauvegardé</span>
-                      ) : (
-                        <span style={{ color: '#10b981' }}>✓ Sauvegardé</span>
-                      )}
-                    </div>
-                  )}
-
-                  {editingDocument ? (
-                    <>
-                      <button
-                        onClick={() => setShowAiGenerator(!showAiGenerator)}
-                        style={{
-                          backgroundColor: showAiGenerator ? '#8b5cf6' : '#a855f7',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.25rem',
-                          padding: '0.5rem 1rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        {showAiGenerator ? 'Fermer IA' : 'IA'}
-                      </button>
-
-                      <button
-                        onClick={saveAndExitEdit}
-                        disabled={saveDocLoading}
-                        style={{
-                          backgroundColor: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.25rem',
-                          padding: '0.5rem 1rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        {saveDocLoading ? 'Sauvegarde...' : '💾 Sauvegarder'}
-                      </button>
-                      <button
-                        onClick={cancelEditDocument}
-                        style={{
-                          backgroundColor: '#6b7280',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.25rem',
-                          padding: '0.5rem 1rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem'
-                        }}
-                      >
-                        Annuler
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={startEditDocument}
-                      style={{
-                        backgroundColor: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.25rem',
-                        padding: '0.5rem 1rem',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      ✏️ Modifier
-                    </button>
-                  )}
-
-                  <button
-                    onClick={closeDocumentView}
-                    style={{
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.25rem',
-                      padding: '0.5rem 1rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    ✕ Fermer
-                  </button>
-                </div>
-              </div>
-
-              {/* creation date */}
-              <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-                Créé le {new Date(selectedDocument.createdAt).toLocaleDateString('fr-FR', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </p>
-
-              {/* error message */}
-              {saveDocError && (
-                <div style={{
-                  marginBottom: '1rem',
-                  padding: '0.75rem',
-                  backgroundColor: '#fef2f2',
-                  border: '1px solid #fca5a5',
-                  color: '#dc2626',
-                  borderRadius: '0.375rem'
-                }}>
-                  {saveDocError}
-                </div>
-              )}
-
-              {/* doc content */}
-              <div style={{
-                backgroundColor: '#f9fafb',
-                border: '1px solid #e5e7eb',
-                borderRadius: '0.5rem',
-                minHeight: '400px'
-              }}>
-                {loadingContent ? (
-                  <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
-                    Chargement du contenu...
-                  </p>
-                ) : contentError ? (
-                  <p style={{ color: '#ef4444', textAlign: 'center', padding: '2rem' }}>
-                    Erreur: {contentError}
-                  </p>
-                ) : editingDocument ? (
-                  // edition mode
-                  <textarea
-                    value={editedContent}
-                    onChange={(e) => setEditedContent(e.target.value)}
-                    style={{
-                      width: '100%',
-                      minHeight: '400px',
-                      padding: '1.5rem',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      lineHeight: '1.6',
-                      color: '#374151',
-                      backgroundColor: 'white',
-                      resize: 'vertical',
-                      outline: 'none',
-                      fontFamily: 'inherit'
-                    }}
-                    placeholder="Commencez à écrire votre contenu..."
-                  />
-                ) : (
-                  // Reading mode
-                  <div style={{
-                    padding: '1.5rem',
-                    whiteSpace: 'pre-wrap',
-                    lineHeight: '1.6',
-                    fontSize: '1rem',
-                    color: '#374151'
-                  }}>
-                    {documentContent}
-                  </div>
-                )}
-              </div>
-
-              {/* Panel IA */}
-              {editingDocument && showAiGenerator && (
-                <div style={{
-                  marginTop: '1rem',
-                  padding: '1rem',
-                  backgroundColor: '#f8fafc',
-                  border: '2px solid #8b5cf6',
-                  borderRadius: '0.5rem'
-                }}>
-                  <h4 style={{
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    color: '#7c3aed',
-                    marginBottom: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    🤖 Assistant IA
-                  </h4>
-
-                  <div style={{ marginBottom: '1rem' }}>
-                    <textarea
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      placeholder="Décrivez ce que vous voulez que l'IA fasse... 
-                      Exemples :
-                      • Améliore ce texte
-                      • Fais un résumé en 3 points
-                      • Traduis en anglais
-                      • Rend le ton plus professionnel
-                      • Ajoute des exemples"
-                      rows={4}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #c7d2fe',
-                        borderRadius: '0.375rem',
-                        fontSize: '0.875rem',
-                        backgroundColor: 'white',
-                        resize: 'vertical'
-                      }}
-                    />
-                  </div>
-
-                  {aiError && (
-                    <div style={{
-                      marginBottom: '1rem',
-                      padding: '0.75rem',
-                      backgroundColor: '#fef2f2',
-                      border: '1px solid #fca5a5',
-                      color: '#dc2626',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.875rem'
-                    }}>
-                      ❌ {aiError}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <button
-                      onClick={generateWithAI}
-                      disabled={aiGenerating || !aiPrompt.trim()}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: aiGenerating ? '#9ca3af' : '#8b5cf6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.375rem',
-                        cursor: aiGenerating ? 'not-allowed' : 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: 'bold',
-                        opacity: (!aiPrompt.trim()) ? 0.5 : 1
-                      }}
-                    >
-                      {aiGenerating ? '🔄 Génération...' : '✨ Générer avec IA'}
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowAiGenerator(false)
-                        setAiPrompt('')
-                        setAiError('')
-                      }}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#6b7280',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.375rem',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      Annuler
-                    </button>
-                  </div>
-
-                  <div style={{
-                    marginTop: '0.75rem',
-                    fontSize: '0.75rem',
-                    color: '#6b7280',
-                    fontStyle: 'italic'
-                  }}>
-                    💡 L'IA remplacera votre contenu actuel. Sauvegardez d'abord si nécessaire !
-                  </div>
-                </div>
-              )}
-
-              {/* edition help */}
-              {editingDocument && (
-                <div style={{
-                  marginTop: '1rem',
-                  padding: '0.75rem',
-                  backgroundColor: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  borderRadius: '0.375rem',
-                  fontSize: '0.875rem',
-                  color: '#1e40af'
-                }}>
-                  💡 <strong>Aide :</strong> Vos modifications sont sauvegardées automatiquement toutes les 2 secondes.
-                  Utilisez "Sauvegarder" pour forcer la sauvegarde et quitter le mode édition.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        {/* DELETE MODAL */}
-        {deleteConfirm && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              backgroundColor: 'white',
-              padding: '2rem',
-              borderRadius: '0.5rem',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-              maxWidth: '400px',
-              width: '90%'
-            }}>
-              <div style={{
-                textAlign: 'center',
-                marginBottom: '1.5rem'
-              }}>
-                <div style={{
-                  fontSize: '3rem',
-                  marginBottom: '1rem'
-                }}>
-                  ⚠️
-                </div>
-                <h3 style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 'bold',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>
-                  Supprimer ce document ?
-                </h3>
-                <p style={{
-                  color: '#6b7280',
-                  fontSize: '0.875rem'
-                }}>
-                  Cette action est irréversible. Le document "{documents.find(d => d.id === deleteConfirm)?.title}" sera définitivement supprimé.
-                </p>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                gap: '0.75rem',
-                justifyContent: 'center'
-              }}>
-                <button
-                  onClick={handleCancelDelete}
-                  disabled={isDeleting}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#6b7280',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.375rem',
-                    cursor: isDeleting ? 'not-allowed' : 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    opacity: isDeleting ? 0.5 : 1
-                  }}
-                >
-                  Annuler
-                </button>
-                
-                <button
-                  onClick={handleConfirmDelete}
-                  disabled={isDeleting}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.375rem',
-                    cursor: isDeleting ? 'not-allowed' : 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    opacity: isDeleting ? 0.5 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  {isDeleting ? (
-                    <>
-                      <div style={{
-                        width: '16px',
-                        height: '16px',
-                        border: '2px solid transparent',
-                        borderTop: '2px solid white',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                      }}></div>
-                      Suppression...
-                    </>
-                  ) : (
-                    <>
-                      🗑️ Supprimer
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+    )
+  }
+
+  return (
+    <div className="dashboard-container">
+      {/* ✅ Theme Toggle */}
+      <div className="dashboard-theme-toggle">
+        <ThemeToggle />
+      </div>
+
+      {/* ✅ Sidebar - statique, pas d'animation */}
+      <div className="dashboard-sidebar">
+        {/* Navigation header */}
+        <div className="sidebar-header">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+            <button
+              onClick={() => handleSectionChange('profile')}
+              className={`sidebar-nav-button ${activeSection === 'profile' ? 'active' : ''}`}
+            >
+              👤 Profile
+            </button>
+
+            <button
+              onClick={() => handleSectionChange('create')}
+              className={`sidebar-nav-button ${activeSection === 'create' ? 'active' : ''}`}
+            >
+              📝 Create Doc
+            </button>
+
+            <button
+              onClick={() => handleSectionChange('documents')}
+              className={`sidebar-nav-button ${activeSection === 'documents' ? 'active' : ''}`}
+            >
+              📋 Documents
+            </button>
+          </div>
+        </div>
+
+        {/* Documents scrollables */}
+        <div className="sidebar-documents">
+          <h3 className="documents-title">
+            📚 Mes Documents ({documents.length})
+          </h3>
+
+          {sidebarLoading ? (
+            <div style={{ textAlign: 'center', padding: 'var(--space-lg)' }}>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                border: '2px solid var(--gray-200)',
+                borderTop: '2px solid var(--primary-600)',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto var(--space-sm)'
+              }}></div>
+              <p style={{ color: 'var(--gray-600)', fontSize: 'var(--text-sm)' }}>
+                🔄 Chargement...
+              </p>
+            </div>
+          ) : sidebarError ? (
+            <p style={{ color: '#ef4444', fontSize: 'var(--text-sm)', textAlign: 'center', padding: 'var(--space-lg)' }}>
+              ❌ {sidebarError}
+            </p>
+          ) : documents.length === 0 ? (
+            <p style={{
+              color: 'var(--gray-600)',
+              fontSize: 'var(--text-sm)',
+              fontStyle: 'italic',
+              textAlign: 'center',
+              padding: 'var(--space-lg)'
+            }}>
+              📄 Aucun document
+            </p>
+          ) : (
+            documents.slice(0, 5).map(doc => (
+              <div key={doc.id} className="document-card-sidebar">
+                <div
+                  onClick={() => handleDocumentSelect(doc)}
+                  style={{ cursor: 'pointer', flex: 1 }}
+                >
+                  <h3 className="document-title-sidebar">
+                    {doc.title.length > 30 ? doc.title.substring(0, 30) + '...' : doc.title}
+                  </h3>
+                  <p className="document-date-sidebar">
+                    📅 {new Date(doc.createdAt).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+
+          {documents.length > 5 && (
+            <div style={{
+              textAlign: 'center',
+              marginTop: 'var(--space-md)',
+              color: 'var(--gray-600)',
+              fontSize: 'var(--text-sm)'
+            }}>
+              + {documents.length - 5} autres documents
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="sidebar-footer">
+          {userLoading ? (
+            <div style={{ textAlign: 'center', padding: 'var(--space-md)' }}>
+              <div style={{
+                width: '20px',
+                height: '20px',
+                border: '2px solid var(--gray-200)',
+                borderTop: '2px solid var(--primary-600)',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto'
+              }}></div>
+            </div>
+          ) : userInfo ? (
+            <div className="user-info-card">
+              <p className="user-name">
+                {userInfo.firstName} {userInfo.lastName}
+              </p>
+              <p className="user-email">
+                {userInfo.email}
+              </p>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: 'var(--space-md)', color: 'var(--gray-600)' }}>
+              ❌ Erreur utilisateur
+            </div>
+          )}
+
+          <button onClick={() => {
+            localStorage.removeItem('token')
+            router.push('/login')
+          }} className="logout-btn">
+            🚪 Déconnexion
+          </button>
+        </div>
+      </div>
+
+      {/* ✅ Main content avec animation isolée */}
+      <div className="dashboard-main">
+        <MainContent />
+      </div>
+
+      {/* ✅ Modal Delete */}
+      {deleteConfirm && (
+        <div className="modal-overlay">
+          <div className="delete-modal">
+            <div className="delete-icon">⚠️</div>
+            <h3 className="delete-title">
+              Supprimer ce document ?
+            </h3>
+            <p className="delete-description">
+              Cette action est irréversible. Le document <strong>"{documents.find(d => d.id === deleteConfirm)?.title}"</strong> sera définitivement supprimé.
+            </p>
+
+            <div className="delete-actions">
+              <button
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+                className="auth-button-outline"
+                style={{ opacity: isDeleting ? 0.5 : 1 }}
+              >
+                ❌ Annuler
+              </button>
+
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="doc-action-btn doc-delete-btn"
+                style={{
+                  opacity: isDeleting ? 0.5 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-xs)'
+                }}
+              >
+                {isDeleting ? (
+                  <>
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      border: '2px solid transparent',
+                      borderTop: '2px solid white',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }}></div>
+                    Suppression...
+                  </>
+                ) : (
+                  <>🗑️ Supprimer</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

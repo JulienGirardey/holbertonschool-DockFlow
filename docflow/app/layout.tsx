@@ -1,15 +1,56 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './global.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'DocFlow - Create intelligent documents with AI',
-  description: 'An intelligent document editor that combines the power of AI with an intuitive interface to create, edit and organize your professional documents.',
+  metadataBase: new URL(process.env.NODE_ENV === 'production' ? 'https://docflow.com' : 'http://localhost:3000'),
+  title: {
+    default: 'DocFlow',
+    template: '%s | DocFlow' // Pages: "Dashboard | DocFlow"
+  },
+  description: 'An intelligent document editor that combines the power of AI...',
   keywords: ['documents', 'AI', 'editor', 'productivity', 'writing'],
-  authors: [{ name: 'DocFlow Team' }],
-  viewport: 'width=device-width, initial-scale=1',
+  authors: [{ name: 'DocFlow Team', url: 'https://docflow.com' }],
+  creator: 'DocFlow Team',
+  
+  // SEO avancé
+  robots: {
+    index: true,
+    follow: true,
+  },
+  
+  // Réseaux sociaux
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://docflow.com',
+    siteName: 'DocFlow',
+    images: ['/og-image.png'],
+  },
+  
+  // PWA
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'DocFlow',
+  },
+}
+
+// ✅ Configuration viewport séparée (Next.js 14+)
+export function generateViewport(): Viewport {
+  return {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    themeColor: [
+      { media: '(prefers-color-scheme: light)', color: '#3b82f6' },
+      { media: '(prefers-color-scheme: dark)', color: '#1e293b' }
+    ]
+  }
 }
 
 export default function RootLayout({

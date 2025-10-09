@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { LogIn } from 'lucide-react'
-import PageTransition from '../components/PageTransition'
 import ThemeToggle from '../components/ThemeToggle'
 
 const loginSchema = z.object({
@@ -62,7 +61,7 @@ export default function LoginPage() {
   }
 
   return (
-    <PageTransition>
+    <div className="animate-fadeInUp">
       <div className="login-container">
         {/* ✅ Theme Toggle - Position fixe en haut à droite */}
         <div style={{
@@ -179,7 +178,7 @@ export default function LoginPage() {
               color: 'var(--gray-600)', 
               fontSize: 'var(--text-sm)' 
             }}>
-              Don't have an account yet?{' '}
+              Don&apos;t have an account yet?{' '}
               <button
                 onClick={() => router.push('/register')}
                 style={{
@@ -197,6 +196,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-    </PageTransition>
+    </div>
   )
 }

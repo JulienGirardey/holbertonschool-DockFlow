@@ -12,7 +12,7 @@ export interface TokenPayload {
 
 export function generateToken(payload: { userId: string; email: string }): string {
   // genere the JWT token
-  let token = jwt.sign(
+  const token = jwt.sign(
     payload,
     JWT_SECRET,
     { expiresIn: '24h' }
