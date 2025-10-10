@@ -506,8 +506,8 @@ body {
 .auth-button-outline {
   background: linear-gradient(135deg, var(--gray-50), var(--summer-sand));
   color: var(--gray-700);
-  padding: var(--space-sm) var(--space-lg);
-  border-radius: var(--radius-2xl);
+  padding: 5px;
+  border-radius: var(--radius-xl);
   border: 2px solid var(--primary-300);
   font-weight: 600;
   cursor: pointer;
@@ -575,7 +575,7 @@ body {
 .cta-button {
   background: linear-gradient(135deg, var(--success-500), var(--summer-mint));
   color: white;
-  padding: var(--space-md) var(--space-2xl);
+  padding: 5px var(--space-lg);
   border-radius: var(--radius-2xl);
   border: none;
   font-size: var(--text-xl);
@@ -812,9 +812,21 @@ body {
   transform: scale(0.95) !important;
 }
 
-/* Animations fluides pour le changement de thème */
-* {
+/* Animations fluides pour le changement de thème - EXCLUANT les inputs pour éviter les problèmes de focus */
+*:not(input):not(textarea):not(select) {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* ✅ CORRECTION FOCUS - Désactiver toutes les transitions sur les inputs pour éviter la perte de focus */
+input, textarea, select {
+  transition: none !important;
+}
+
+/* ✅ CORRECTION SPÉCIFIQUE - S'assurer que nos inputs d'édition n'ont AUCUNE animation */
+.modal-title-input, .content-textarea {
+  transition: none !important;
+  transform: none !important;
+  animation: none !important;
 }
 
 /* Classes utilitaires */
@@ -1658,7 +1670,7 @@ body {
   color: var(--gray-900);
   border: 2px solid var(--primary-500);
   border-radius: var(--radius-lg);
-  padding: var(--space-md);
+  padding: 10px;
   background: linear-gradient(135deg, white, var(--primary-50));
   flex: 1;
   margin-right: var(--space-lg);
@@ -1670,10 +1682,18 @@ body {
   align-items: center;
 }
 
+.date-save-status {
+	display: flex;
+	flex-wrap: nowrap;
+	justify-content: space-between;
+}
+
 .save-indicator {
+	display: flex;
   font-size: var(--text-xs);
   color: var(--gray-600);
   margin-right: var(--space-md);
+  text-align: right;
 }
 
 .save-indicator.saving {
@@ -1902,10 +1922,64 @@ body {
 
 /* Theme Toggle pour dashboard */
 .dashboard-theme-toggle {
+	display: flex;
+	flex-wrap: nowrap;
+	justify-content: space-between;
   position: fixed;
   top: 20px;
+  left: 320px; /* ✅ NOUVEAU: Positionné après la sidebar (280px + 40px de marge) */
   right: 20px;
   z-index: 100;
+  width: calc(100% - 340px); /* ✅ AJUSTÉ: Largeur adaptée */
+}
+
+/* ✅ RESPONSIVE pour dashboard-theme-toggle */
+@media (max-width: 1024px) {
+  .dashboard-theme-toggle {
+    left: 280px; /* ✅ AJUSTÉ: Pour sidebar réduite */
+    width: calc(100% - 300px);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-theme-toggle {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    width: calc(100% - 20px);
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+  
+  .dashboard-theme-toggle .back-button {
+    order: 1;
+    flex: 0 0 auto;
+  }
+  
+  .dashboard-theme-toggle .theme-toggle {
+    order: 2;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-theme-toggle {
+    position: relative;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, var(--summer-peach), var(--summer-sand));
+    border-bottom: 2px solid var(--primary-200);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .dashboard-theme-toggle .back-button {
+    font-size: var(--text-sm);
+    padding: 6px 12px;
+  }
 }
 
 /* ✅ AJOUT - Ajustement des boutons sidebar seulement */
@@ -1976,4 +2050,133 @@ body {
 
 .dark .sidebar-documents .doc-delete-btn:hover {
   background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+}
+
+/* ✅ RESPONSIVE DASHBOARD */
+@media (max-width: 1024px) {
+  .dashboard-sidebar {
+    width: 240px;
+  }
+  
+  .dashboard-main {
+    padding: var(--space-lg);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+  
+  .dashboard-sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    margin: 0;
+    border-radius: 0;
+    margin-bottom: var(--space-md);
+    max-height: 40vh;
+  }
+  
+  .sidebar-header {
+    border-radius: 0;
+  }
+  
+  .sidebar-footer {
+    border-radius: 0;
+  }
+  
+  .sidebar-documents {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .dashboard-main {
+    padding: var(--space-md);
+    padding-top: 0;
+  }
+  
+  .documents-grid {
+    gap: var(--space-md);
+  }
+  
+  .document-card {
+    padding: var(--space-md);
+  }
+  
+  .modal-content {
+    width: 98%;
+    max-width: none;
+    margin: 1%;
+    padding: var(--space-lg);
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-main {
+    padding: var(--space-sm);
+  }
+  
+  .section-header {
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+  }
+  
+  .section-title {
+    font-size: var(--text-xl);
+  }
+  
+  .profile-content,
+  .create-content,
+  .documents-content {
+    padding: var(--space-lg);
+  }
+  
+  .create-textarea,
+  .content-textarea {
+    min-height: 250px;
+  }
+  
+  .document-actions {
+    flex-direction: column;
+    gap: var(--space-xs);
+    align-items: stretch;
+  }
+  
+  .doc-action-btn {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .ai-panel {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+  }
+  
+  .ai-actions {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+  
+  .ai-actions button {
+    width: 100%;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .modal-actions button {
+    width: 100%;
+  }
+  
+  .delete-actions {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .delete-actions button {
+    width: 100%;
+  }
 }
