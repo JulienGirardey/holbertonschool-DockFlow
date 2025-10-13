@@ -20,12 +20,18 @@ export default function LoginPage() {
   const [error, setError]= useState('')
   const router = useRouter()
   
+  // Note: react-hook-form gère automatiquement les références
+  
   const {
     register,
     handleSubmit,
     formState: { errors }
   } = useForm<loginFormData>({
-    resolver: zodResolver(loginSchema)
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: ''
+    }
   })
 
   const onSubmit = async (data: loginFormData) => {
@@ -33,7 +39,7 @@ export default function LoginPage() {
     setError('')
 
     try {
-      console.log('Login data:', data)
+
       
       const response = await fetch('/api/auth/login', {
         method: 'POST',

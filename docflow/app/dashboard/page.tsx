@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import ThemeToggle from '../components/ThemeToggle'
 import LoadingScreen from '../components/LoadingScreen'
+import CreateDocumentForm from '../components/CreateDocumentForm'
+import EditDocumentForm from '../components/EditDocumentForm'
 
 interface Document {
 	id: string
@@ -49,8 +51,7 @@ export default function Dashboard() {
 	const [saveLoading, setSaveLoading] = useState(false)
 	const [saveError, setSaveError] = useState('')
 
-	const [newDocTitle, setNewDocTitle] = useState('')
-	const [newDocContent, setNewDocContent] = useState('')
+
 
 	const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
 	const [documentContent, setDocumentContent] = useState('')
@@ -58,8 +59,7 @@ export default function Dashboard() {
 	const [contentError, setContentError] = useState('')
 
 	const [editingDocument, setEditingDocument] = useState(false)
-	const [editedTitle, setEditedTitle] = useState('')
-	const [editedContent, setEditedContent] = useState('')
+
 	const [saveDocLoading, setSaveDocLoading] = useState(false)
 	const [saveDocError, setSaveDocError] = useState('')
 	const [isDirty, setIsDirty] = useState(false)
@@ -75,8 +75,7 @@ export default function Dashboard() {
 	const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [deleteError, setDeleteError] = useState('')
-
-	// ✅ State supprimé car causait des re-renders complets
+	const [isEditing, setIsEditing] = useState(false)
 
 	// ✅ Chargement initial - sidebar uniquement
 	useEffect(() => {
@@ -103,25 +102,8 @@ export default function Dashboard() {
 			return
 		}
 
-		// Charger les données selon la section active
-		switch (activeSection) {
-			case 'profile':
-				if (!userSettings) {
-					setProfileLoading(true)
-					fetchUserSettings().finally(() => setProfileLoading(false))
-				}
-				break
-
-			case 'documents':
-				if (documents.length === 0 && !documentsLoading) {
-					setDocumentsLoading(true)
-					fetchDocuments().finally(() => setDocumentsLoading(false))
-				}
-				break
-
-			case 'create':
-				// Pas de chargement nécessaire pour create
-				break
+		if (activeSection === 'documents') {
+			fetchDocuments()
 		}
 	}, [activeSection])
 
@@ -135,49 +117,7 @@ export default function Dashboard() {
 
 	// ✅ Références pour l'auto-save et la gestion du focus
 	const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
-	const titleInputRef = useRef<HTMLInputElement>(null)
-	const contentTextareaRef = useRef<HTMLTextAreaElement>(null)
 
-	// ✅ Handlers avec auto-save restauré
-	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		const newTitle = e.target.value
-		setEditedTitle(newTitle)
-		setIsDirty(true)
-
-		// Auto-save après 2 secondes d'inactivité
-		if (autoSaveTimerRef.current) {
-			clearTimeout(autoSaveTimerRef.current)
-		}
-		autoSaveTimerRef.current = setTimeout(() => {
-			if (newTitle.trim() && editedContent.trim()) {
-				saveDocumentChanges(newTitle, editedContent, true)
-			}
-		}, 2000)
-	}, [editedContent])
-
-	const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-		const newContent = e.target.value
-		setEditedContent(newContent)
-		setIsDirty(true)
-
-		// Auto-save après 2 secondes d'inactivité
-		if (autoSaveTimerRef.current) {
-			clearTimeout(autoSaveTimerRef.current)
-		}
-		autoSaveTimerRef.current = setTimeout(() => {
-			if (editedTitle.trim() && newContent.trim()) {
-				saveDocumentChanges(editedTitle, newContent, true)
-			}
-		}, 2000)
-	}, [editedTitle])
-
-	// ✅ Effect de surveillance des changements restauré
-	useEffect(() => {
-		if (editingDocument && selectedDocument) {
-			const hasChanges = editedTitle !== lastSavedTitle || editedContent !== lastSavedContent
-			setIsDirty(hasChanges)
-		}
-	}, [editedTitle, editedContent, editingDocument, lastSavedTitle, lastSavedContent])
 
 	// ✅ Nettoyage du timer lors du démontage
 	useEffect(() => {
@@ -284,7 +224,7 @@ export default function Dashboard() {
 			const userInfoData = await response.json()
 			setUserInfo(userInfoData)
 		} catch (err) {
-			console.error('Error fetching user info:', err)
+			// Silently fail - user info will be handled by loading state
 		} finally {
 			setUserLoading(false)
 		}
@@ -345,50 +285,7 @@ export default function Dashboard() {
 		setEditColorMode(userSettings?.colorMode || '')
 	}
 
-	// create document
-	const handleCreateDocument = async () => {
-		try {
-			setCreateLoading(true)
-			setCreateError('')
 
-			const token = localStorage.getItem('token')
-			const requestData = {
-				title: newDocTitle.trim(),
-				objective: newDocTitle.trim(),
-				rawContent: newDocContent.trim()
-			}
-
-			const response = await fetch('/api/documents', {
-				method: 'POST',
-				headers: {
-					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(requestData)
-			})
-
-			if (!response.ok) {
-				const errorData = await response.json()
-				if (response.status === 401) {
-					localStorage.removeItem('token')
-					router.push('/login')
-					return
-				}
-				throw new Error(errorData.error || 'Failed to create document')
-			}
-
-			const newDocument = await response.json()
-			setDocuments(prev => [newDocument, ...prev])
-			setNewDocTitle('')
-			setNewDocContent('')
-			handleSectionChange('documents')
-
-		} catch (err) {
-			setCreateError(err instanceof Error ? err.message : 'Error creating document')
-		} finally {
-			setCreateLoading(false)
-		}
-	}
 
 	// fetch document content
 	const fetchDocumentContent = async (documentId: string) => {
@@ -428,92 +325,11 @@ export default function Dashboard() {
 	}
 
 	const cancelEditDocument = () => {
-		// Nettoyer le timer d'auto-save
-		if (autoSaveTimerRef.current) {
-			clearTimeout(autoSaveTimerRef.current)
-			autoSaveTimerRef.current = null
-		}
-		
 		setEditingDocument(false)
-		setEditedTitle('')
-		setEditedContent('')
 		setSaveDocError('')
 		setIsDirty(false)
 		setAutoSaving(false)
 		setShowAiGenerator(false)
-	}
-
-	const saveAndExitEdit = async () => {
-		await saveDocumentChanges(editedTitle, editedContent)
-		setEditingDocument(false)
-	}
-
-	const saveDocumentChanges = async (title: string, content: string, isAutoSave = false) => {
-		try {
-			if (isAutoSave) {
-				setAutoSaving(true)
-			} else {
-				setSaveDocLoading(true)
-			}
-			setSaveDocError('')
-
-			const token = localStorage.getItem('token')
-			if (!token) {
-				router.push('/login')
-				return
-			}
-
-			const response = await fetch(`/api/documents/${selectedDocument?.id}`, {
-				method: 'PUT',
-				headers: {
-					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					title: title.trim(),
-					rawContent: content.trim(),
-					objective: title.trim()
-				})
-			})
-
-			if (!response.ok) {
-				if (response.status === 401) {
-					localStorage.removeItem('token')
-					router.push('/login')
-					return
-				}
-				if (!isAutoSave) {
-					throw new Error('Failed to save document')
-				}
-				return
-			}
-
-			const updatedDoc = await response.json()
-
-			setDocuments(prev => prev.map(doc =>
-				doc.id === selectedDocument?.id ? { ...doc, title: updatedDoc.title } : doc
-			))
-
-			if (selectedDocument) {
-				setSelectedDocument(prev => prev ? { ...prev, title: updatedDoc.title } : null)
-			}
-
-			setDocumentContent(updatedDoc.rawContent || content)
-			setLastSavedContent(content)
-			setLastSavedTitle(title)
-			setIsDirty(false)
-
-		} catch (err) {
-			if (!isAutoSave) {
-				setSaveDocError(err instanceof Error ? err.message : 'Error saving document')
-			}
-		} finally {
-			if (isAutoSave) {
-				setTimeout(() => setAutoSaving(false), 500)
-			} else {
-				setSaveDocLoading(false)
-			}
-		}
 	}
 
 	const handleDeleteClick = (documentId: string) => {
@@ -546,14 +362,12 @@ export default function Dashboard() {
 				}
 
 				setDeleteConfirm(null)
-				console.log('Document supprimé avec succès')
 
 			} else {
 				const errorData = await response.json()
 				setDeleteError(errorData.error || 'Erreur lors de la suppression')
 			}
 		} catch (error) {
-			console.error('Delete error:', error)
 			setDeleteError('Erreur lors de la suppression du document')
 		} finally {
 			setIsDeleting(false)
@@ -563,62 +377,13 @@ export default function Dashboard() {
 	const startEditDocument = () => {
 		if (selectedDocument && documentContent) {
 			setEditingDocument(true)
-			setEditedTitle(selectedDocument.title)
-			setEditedContent(documentContent)
 			setSaveDocError('')
-
-			// Initialiser les valeurs de référence pour l'auto-save
-			setLastSavedTitle(selectedDocument.title)
-			setLastSavedContent(documentContent)
 			setIsDirty(false)
 			setAutoSaving(false)
 		}
 	}
 
-	// ✅ Fonction AI corrigée
-	const generateWithAI = async () => {
-		try {
-			setAiGenerating(true)
-			setAiError('')
 
-			const token = localStorage.getItem('token')
-			if (!token) {
-				router.push('/login')
-				return
-			}
-
-			const response = await fetch('/api/ai/generate', {
-				method: 'POST',
-				headers: {
-					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					prompt: aiPrompt,
-					content: editedContent
-				})
-			})
-
-			if (!response.ok) {
-				if (response.status === 401) {
-					localStorage.removeItem('token')
-					router.push('/login')
-					return
-				}
-				throw new Error('Failed to generate content')
-			}
-
-			const data = await response.json()
-			setEditedContent(data.generatedContent)
-			setAiPrompt('')
-			setShowAiGenerator(false)
-
-		} catch (err) {
-			setAiError(err instanceof Error ? err.message : 'Error generating content')
-		} finally {
-			setAiGenerating(false)
-		}
-	}
 
 	// ✅ Composant Loading pour les différentes sections
 	const SectionLoading = ({ message = "Chargement..." }: { message?: string }) => (
@@ -646,15 +411,12 @@ export default function Dashboard() {
 
 	// ✅ Fonction simplifiée pour changer de section
 	const handleSectionChange = (section: 'profile' | 'create' | 'documents' | 'document') => {
-		if (activeSection === 'document' && section !== 'document') {
-			setSelectedDocument(null)
-			setDocumentContent('')
-			setContentError('')
-			setEditingDocument(false)
-			setShowAiGenerator(false)
-		}
-
 		setActiveSection(section)
+		
+		if (section === 'documents') {
+			setSelectedDocument(null)
+			setIsEditing(false)
+		}
 	}
 
 	// ✅ Fonction simplifiée pour sélectionner un document
@@ -683,196 +445,101 @@ export default function Dashboard() {
 				{/* ✅ Document View */}
 				{activeSection === 'document' && selectedDocument && (
 					<div>
-						{/* Header avec bouton retour */}
-						<div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+						{editingDocument ? (
+							<EditDocumentForm
+								document={selectedDocument}
+								documentContent={documentContent}
+								onSave={async (title, content, isAutoSave = false) => {
+									// Utilise la même logique que saveAndExitEdit
+									try {
+										const response = await fetch(`/api/documents/${selectedDocument.id}`, {
+											method: 'PUT',
+											headers: {
+												'Content-Type': 'application/json',
+											},
+											body: JSON.stringify({
+												title: title,
+												content: content
+											})
+										})
 
-							{editingDocument ? (
-								<input
-									ref={titleInputRef}
-									type="text"
-									value={editedTitle}
-									onChange={handleTitleChange}
-									className="modal-title-input"
-									placeholder="Titre du document"
-									style={{ fontSize: 'var(--text-2xl)', fontWeight: 'bold' }}
-								/>
-							) : (
-								<h2 className="section-title" style={{ margin: 0 }}>
-									📄 {selectedDocument.title}
-								</h2>
-							)}
+										if (response.ok) {
+											const updatedDoc = await response.json()
+											setSelectedDocument(updatedDoc)
+											
+											if (!isAutoSave) {
+												// Force refetch pour sync avec la liste
+												await fetchDocuments()
+												setEditingDocument(false)
+											}
+										} else {
+											throw new Error('Erreur de sauvegarde')
+										}
+									} catch (error) {
+										console.error('Erreur lors de la sauvegarde:', error)
+										throw error
+									}
+								}}
+								onCancel={() => {
+									cancelEditDocument()
+								}}
+								onShowAI={(show) => setShowAiGenerator(show)}
+								showAI={showAiGenerator}
+								saveLoading={saveDocLoading}
+								saveError={saveDocError}
+								autoSaving={autoSaving}
+								isDirty={isDirty}
+							/>
+						) : (
+							<>
+								{/* Header avec bouton retour */}
+								<div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+									<h2 className="section-title" style={{ margin: 0 }}>
+										📄 {selectedDocument.title}
+									</h2>
 
-							<div style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
-
-								{editingDocument ? (
-									<>
+									<div style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
 										<button
-											onClick={() => setShowAiGenerator(!showAiGenerator)}
-											className="auth-button-outline"
-											style={{
-												background: showAiGenerator
-													? 'linear-gradient(135deg, #8b5cf6, #a855f7)'
-													: 'var(--gray-100)',
-												color: showAiGenerator ? 'white' : 'var(--gray-700)'
-											}}
+											onClick={startEditDocument}
+											className="auth-button-primary"
 										>
-											{showAiGenerator ? '🤖 Fermer IA' : '🤖 Assistant IA'}
+											✏️ Modifier
 										</button>
+									</div>
+								</div>
 
-										<button
-											onClick={saveAndExitEdit}
-											disabled={saveDocLoading}
-											className="cta-button"
-											style={{ width: 'auto' }}
-										>
-											{saveDocLoading ? '🔄 Sauvegarde...' : '💾 Sauvegarder'}
-										</button>
+								{/* Date */}
+								<p style={{
+									color: 'var(--gray-600)',
+									fontSize: 'var(--text-sm)',
+									marginBottom: 'var(--space-lg)'
+								}}>
+									📅 Créé le {new Date(selectedDocument.createdAt).toLocaleDateString('fr-FR', {
+										year: 'numeric',
+										month: 'long',
+										day: 'numeric',
+										hour: '2-digit',
+										minute: '2-digit'
+									})}
+								</p>
 
-										<button
-											onClick={cancelEditDocument}
-											className="auth-button-outline"
-										>
-											❌ Annuler
-										</button>
-									</>
-								) : (
-									<button
-										onClick={startEditDocument}
-										className="auth-button-primary"
-									>
-										✏️ Modifier
-									</button>
-								)}
-							</div>
-						</div>
-
-						<div className='date-save-status'>
-							{/* Date */}
-							<p style={{
-								color: 'var(--gray-600)',
-								fontSize: 'var(--text-sm)'
-							}}>
-								📅 Créé le {new Date(selectedDocument.createdAt).toLocaleDateString('fr-FR', {
-									year: 'numeric',
-									month: 'long',
-									day: 'numeric',
-									hour: '2-digit',
-									minute: '2-digit'
-								})}
-							</p>
-
-							{editingDocument && (
-								<div className="save-indicator">
-									{autoSaving ? (
-										<span className="saving">� Sauvegarde...</span>
-									) : isDirty ? (
-										<span className="dirty">● Non sauvegardé</span>
+								{/* Contenu du document */}
+								<div className="document-content-area">
+									{loadingContent ? (
+										<p style={{ textAlign: 'center', color: 'var(--gray-600)', padding: 'var(--space-2xl)' }}>
+											🔄 Chargement du contenu...
+										</p>
+									) : contentError ? (
+										<p style={{ color: '#ef4444', textAlign: 'center', padding: 'var(--space-2xl)' }}>
+											❌ {contentError}
+										</p>
 									) : (
-										<span className="saved">✅ Sauvegardé</span>
+										<div className="content-display" style={{ minHeight: '400px' }}>
+											{documentContent}
+										</div>
 									)}
 								</div>
-							)}
-						</div>
-
-						{/* Erreur */}
-						{saveDocError && (
-							<div className="error-message">
-								❌ {saveDocError}
-							</div>
-						)}
-
-						{/* Panel IA */}
-						{editingDocument && showAiGenerator && (
-							<div className="ai-panel" style={{ marginBottom: 'var(--space-lg)' }}>
-								<h4 className="ai-title">
-									🤖 Assistant IA DocFlow
-								</h4>
-
-								<textarea
-									value={aiPrompt}
-									onChange={(e) => setAiPrompt(e.target.value)}
-									placeholder="🎯 Que voulez-vous faire avec l'IA ?
-
-Exemples :
-• Améliore ce texte pour le rendre plus professionnel
-• Fais un résumé en 3 points clés  
-• Traduis ce texte en anglais
-• Rend le ton plus dynamique et engageant
-• Ajoute des exemples concrets
-• Réécris avec un style plus formel"
-									rows={4}
-									className="ai-textarea"
-								/>
-
-								{aiError && (
-									<div className="error-message">
-										❌ {aiError}
-									</div>
-								)}
-
-								<div className="ai-actions">
-									<button
-										onClick={generateWithAI}
-										disabled={aiGenerating || !aiPrompt.trim()}
-										className="cta-button"
-										style={{
-											width: 'auto',
-											opacity: (!aiPrompt.trim()) ? 0.5 : 1
-										}}
-									>
-										{aiGenerating ? '🔄 Génération...' : '✨ Générer avec IA'}
-									</button>
-
-									<button
-										onClick={() => {
-											setShowAiGenerator(false)
-											setAiPrompt('')
-											setAiError('')
-										}}
-										className="auth-button-outline"
-									>
-										❌ Fermer
-									</button>
-								</div>
-
-								<div className="ai-help-text">
-									💡 L'IA remplacera votre contenu actuel. Sauvegardez d'abord si nécessaire !
-								</div>
-							</div>
-						)}
-
-						{/* Contenu du document */}
-						<div className="document-content-area">
-							{loadingContent ? (
-								<p style={{ textAlign: 'center', color: 'var(--gray-600)', padding: 'var(--space-2xl)' }}>
-									🔄 Chargement du contenu...
-								</p>
-							) : contentError ? (
-								<p style={{ color: '#ef4444', textAlign: 'center', padding: 'var(--space-2xl)' }}>
-									❌ {contentError}
-								</p>
-							) : editingDocument ? (
-								<textarea
-									ref={contentTextareaRef}
-									value={editedContent}
-									onChange={handleContentChange}
-									className="content-textarea"
-									placeholder="✍️ Commencez à écrire votre contenu..."
-									style={{ minHeight: '400px' }}
-								/>
-							) : (
-								<div className="content-display" style={{ minHeight: '400px' }}>
-									{documentContent}
-								</div>
-							)}
-						</div>
-
-						{/* Aide édition */}
-						{editingDocument && (
-							<div className="edit-help">
-								💡 <strong>Mode édition:</strong> Vos modifications sont sauvegardées automatiquement toutes les 2 secondes.
-								Cliquez sur "Sauvegarder" pour forcer la sauvegarde et quitter le mode édition.
-							</div>
+							</>
 						)}
 					</div>
 				)}
@@ -998,66 +665,10 @@ Exemples :
 
 				{/* ✅ Create Section */}
 				{activeSection === 'create' && (
-					<div>
-						<div className="section-header">
-							<h2 className="section-title">📝 Créer un nouveau document</h2>
-						</div>
-
-						<div className="create-content">
-							{createError && (
-								<div className="error-message">❌ {createError}</div>
-							)}
-
-							<form className="create-form" onSubmit={(e) => { e.preventDefault(); handleCreateDocument(); }}>
-								<div>
-									<input
-										type="text"
-										placeholder="🎯 Titre de votre document..."
-										value={newDocTitle}
-										onChange={(e) => setNewDocTitle(e.target.value)}
-										className="create-input"
-									/>
-								</div>
-
-								<div>
-									<textarea
-										placeholder="📝 Contenu de votre document... 
-
-Conseil: Décrivez votre idée, notre IA l'améliorera pour vous !"
-										value={newDocContent}
-										onChange={(e) => setNewDocContent(e.target.value)}
-										className="create-textarea"
-										rows={12}
-									/>
-								</div>
-
-								<button
-									type="submit"
-									disabled={createLoading || !newDocTitle.trim() || !newDocContent.trim()}
-									className="cta-button"
-									style={{
-										width: 'auto',
-										alignSelf: 'flex-start',
-										opacity: (createLoading || !newDocTitle.trim() || !newDocContent.trim()) ? 0.5 : 1
-									}}
-								>
-									{createLoading ? (
-										<span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
-											<div style={{
-												width: '16px',
-												height: '16px',
-												border: '2px solid transparent',
-												borderTop: '2px solid white',
-												borderRadius: '50%',
-												animation: 'spin 1s linear infinite'
-											}}></div>
-											Création en cours...
-										</span>
-									) : '🚀 Générer le document'}
-								</button>
-							</form>
-						</div>
-					</div>
+					<CreateDocumentForm 
+						onDocumentCreated={(newDocument) => setDocuments(prev => [newDocument, ...prev])}
+						onSectionChange={handleSectionChange}
+					/>
 				)}
 
 				{/* ✅ Documents Section avec loading isolé */}
