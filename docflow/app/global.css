@@ -1499,6 +1499,8 @@ input, textarea, select {
   margin-bottom: var(--space-xl);
   border: 2px solid var(--primary-200);
   box-shadow: var(--shadow-md);
+	display: flex;
+	justify-content: space-between;
 }
 
 .section-title {
@@ -1507,6 +1509,32 @@ input, textarea, select {
   color: var(--gray-900);
   margin: 0;
   text-align: center;
+}
+
+.cta-button {
+	width: 10em;
+	padding: 10px;
+}
+
+.generate-IA {
+	margin: 10px;
+	margin-left: 21em;
+}
+
+.aiPromptTextarea {
+	height: 8em;
+	border-radius: 10px;
+	padding-left: 10px;
+	padding-top: 5px;
+}
+
+.aiGenerator {
+	display: flex;
+	flex-direction: column;
+}
+
+.aiPromptLabel {
+	text-align: center;
 }
 
 .profile-content,

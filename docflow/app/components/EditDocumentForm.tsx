@@ -12,14 +12,12 @@ interface Document {
 interface EditDocumentFormProps {
   document: Document
   documentContent: string
-  onSave: (title: string, content: string, isAutoSave?: boolean) => Promise<void>
+  onSave: (title: string, content: string) => Promise<void>
   onCancel: () => void
   onShowAI: (show: boolean) => void
   showAI: boolean
   saveLoading: boolean
   saveError: string
-  autoSaving: boolean
-  isDirty: boolean
 }
 
 export default function EditDocumentForm({
@@ -30,70 +28,73 @@ export default function EditDocumentForm({
   onShowAI,
   showAI,
   saveLoading,
-  saveError,
-  autoSaving,
-  isDirty
+  saveError
 }: EditDocumentFormProps) {
   const [editedTitle, setEditedTitle] = useState(document.title)
   const [editedContent, setEditedContent] = useState(documentContent)
-  
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Mettre à jour les states si le document change
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiError, setAiError] = useState('')
+
   useEffect(() => {
     setEditedTitle(document.title)
     setEditedContent(documentContent)
-  }, [document.id, document.title, documentContent])
+  }, [document.id])
 
   const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value
-    setEditedTitle(newTitle)
-
-    // Auto-save après 2 secondes d'inactivité
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current)
-    }
-    autoSaveTimerRef.current = setTimeout(() => {
-      if (newTitle.trim() && editedContent.trim()) {
-        onSave(newTitle, editedContent, true)
-      }
-    }, 2000)
-  }, [editedContent, onSave])
+    setEditedTitle(e.target.value)
+  }, [])
 
   const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value
-    setEditedContent(newContent)
-
-    // Auto-save après 2 secondes d'inactivité
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current)
-    }
-    autoSaveTimerRef.current = setTimeout(() => {
-      if (editedTitle.trim() && newContent.trim()) {
-        onSave(editedTitle, newContent, true)
-      }
-    }, 2000)
-  }, [editedTitle, onSave])
+    setEditedContent(e.target.value)
+  }, [])
 
   const handleSaveAndExit = async () => {
     await onSave(editedTitle, editedContent)
   }
 
-  // Nettoyage du timer
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current)
-      }
+  const handleGenerateAI = async () => {
+    if (!aiPrompt.trim()) {
+      setAiError('Please enter a prompt')
+      return
     }
-  }, [])
+    setAiGenerating(true)
+    setAiError('')
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`/api/documents/${document.id}/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          currentContent: editedContent
+        })
+      })
+      if (!response.ok) {
+        throw new Error('AI generation failed')
+      }
+      const data = await response.json()
+      const generatedContent = data.generatedContent || data.content || data.text || ''
+      if (!generatedContent) throw new Error('No content generated')
+      setEditedContent(prev => prev + '\n\n' + generatedContent)
+      setAiPrompt('')
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'AI error')
+    } finally {
+      setAiGenerating(false)
+    }
+  }
 
   return (
     <div>
-      {/* Header avec bouton retour */}
-      <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+      {/* Header */}
+      <div className="section-header">
         <input
           ref={titleInputRef}
           type="text"
@@ -101,10 +102,9 @@ export default function EditDocumentForm({
           onChange={handleTitleChange}
           className="modal-title-input"
           placeholder="Titre du document"
-          style={{ fontSize: 'var(--text-2xl)', fontWeight: 'bold' }}
         />
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+        <div className="modal-actions">
           <button
             onClick={() => onShowAI(!showAI)}
             className="auth-button-outline"
@@ -117,7 +117,6 @@ export default function EditDocumentForm({
           >
             {showAI ? '🤖 Fermer IA' : '🤖 Assistant IA'}
           </button>
-
           <button
             onClick={handleSaveAndExit}
             disabled={saveLoading}
@@ -126,7 +125,6 @@ export default function EditDocumentForm({
           >
             {saveLoading ? '🔄 Sauvegarde...' : '💾 Sauvegarder'}
           </button>
-
           <button
             onClick={onCancel}
             className="auth-button-outline"
@@ -136,40 +134,56 @@ export default function EditDocumentForm({
         </div>
       </div>
 
-      <div className='date-save-status'>
-        {/* Date */}
-        <p style={{
-          color: 'var(--gray-600)',
-          fontSize: 'var(--text-sm)'
-        }}>
-          📅 Créé le {new Date(document.createdAt).toLocaleDateString('fr-FR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })}
-        </p>
-
-        <div className="save-indicator">
-          {autoSaving ? (
-            <span className="saving">🔄 Sauvegarde...</span>
-          ) : isDirty ? (
-            <span className="dirty">● Non sauvegardé</span>
-          ) : (
-            <span className="saved">✅ Sauvegardé</span>
-          )}
+      <div className='date-AI'>
+        <div className="date-save-status">
+          <p style={{
+                color: 'var(--gray-600)',
+                fontSize: 'var(--text-sm)',
+                marginBottom: 'var(--space-lg)'
+              }}>
+                📅 Créé le {new Date(document.createdAt).toLocaleDateString('fr-FR', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </p>
         </div>
+
+        {/* Zone IA */}
+        {showAI && (
+          <div className="aiGenerator">
+            <label className="aiPromptLabel" htmlFor="ai-prompt">
+              AI Prompt
+            </label>
+            <textarea
+              id="ai-prompt"
+              className="aiPromptTextarea"
+              value={aiPrompt}
+              onChange={e => setAiPrompt(e.target.value)}
+              placeholder="Describe what you want the AI to generate..."
+              disabled={aiGenerating}
+              rows={3}
+            />
+            <button
+              onClick={handleGenerateAI}
+              disabled={aiGenerating}
+              className="cta-button mx-auto generate-IA"
+            >
+              {aiGenerating ? 'Generating...' : 'Generate'}
+            </button>
+            {aiError && <div className="error-message">{aiError}</div>}
+          </div>
+        )}
       </div>
 
-      {/* Erreur */}
       {saveError && (
         <div className="error-message">
           ❌ {saveError}
         </div>
       )}
 
-      {/* Contenu du document */}
       <div className="document-content-area">
         <textarea
           ref={contentTextareaRef}
@@ -179,12 +193,6 @@ export default function EditDocumentForm({
           placeholder="✍️ Commencez à écrire votre contenu..."
           style={{ minHeight: '400px' }}
         />
-      </div>
-
-      {/* Aide édition */}
-      <div className="edit-help">
-        💡 <strong>Mode édition:</strong> Vos modifications sont sauvegardées automatiquement toutes les 2 secondes.
-        Cliquez sur "Sauvegarder" pour forcer la sauvegarde et quitter le mode édition.
       </div>
     </div>
   )
