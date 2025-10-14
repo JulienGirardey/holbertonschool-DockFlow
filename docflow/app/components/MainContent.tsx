@@ -374,7 +374,7 @@ export default function MainContent(props: MainContentProps) {
                 onClick={() => props.onSectionChange('create')}
                 className="cta-button"
               >
-                ✨ Créer votre premier document
+                Créer votre premier document
               </button>
             </div>
           ) : (

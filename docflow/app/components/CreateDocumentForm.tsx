@@ -68,9 +68,9 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
           color: 'var(--gray-900)',
           marginBottom: 'var(--space-md)'
         }}>
-          ✨ Créer un nouveau document
+          Créer un nouveau document
         </h2>
-        
+
         <p style={{
           color: 'var(--gray-600)',
           fontSize: 'var(--text-base)',
@@ -97,7 +97,7 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
         <div>
           <input
             type="text"
-            placeholder="🎯 Titre de votre document..."
+            placeholder="Titre de votre document..."
             value={newDocTitle}
             onChange={(e) => setNewDocTitle(e.target.value)}
             className="create-input"
@@ -106,9 +106,8 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
 
         <div>
           <textarea
-            placeholder="📝 Contenu de votre document... 
-
-Conseil: Décrivez votre idée, notre IA l'améliorera pour vous !"
+            placeholder="Contenu de votre document... 
+            Conseil: Décrivez votre idée, notre IA l'améliorera pour vous !"
             value={newDocContent}
             onChange={(e) => setNewDocContent(e.target.value)}
             className="create-textarea"
@@ -126,7 +125,7 @@ Conseil: Décrivez votre idée, notre IA l'améliorera pour vous !"
             opacity: (createLoading || !newDocTitle.trim() || !newDocContent.trim()) ? 0.5 : 1
           }}
         >
-          {createLoading ? '🔄 Création en cours...' : '🎯 Créer le document'}
+          {createLoading ? '🔄 Création en cours...' : 'Créer le document'}
         </button>
       </form>
     </div>
