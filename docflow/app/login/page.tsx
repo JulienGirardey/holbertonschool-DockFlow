@@ -40,6 +40,7 @@ export default function LoginPage() {
 
     try {
 
+			await new Promise(resolve => setTimeout(resolve, 2000))
       
       const response = await fetch('/api/auth/login', {
         method: 'POST',

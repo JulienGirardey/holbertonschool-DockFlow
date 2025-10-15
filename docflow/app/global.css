@@ -510,6 +510,7 @@ body {
   border-radius: var(--radius-xl);
   border: 2px solid var(--primary-300);
   font-weight: 600;
+	width: 6em;
   cursor: pointer;
   font-size: var(--text-base);
   transition: var(--transition-fast);

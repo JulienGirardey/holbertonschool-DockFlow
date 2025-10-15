@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Sidebar from '../components/sidebar'
 import MainContent from '../components/MainContent'
 import Header from '../components/Header'
@@ -15,7 +15,6 @@ interface Document {
 
 interface UserSettings {
 	language: string
-	colorMode: string
 }
 
 interface User {
@@ -41,10 +40,10 @@ export default function Dashboard() {
 	const [userLoading, setUserLoading] = useState(true)
 
 	const router = useRouter()
+	const pathname = usePathname()
 
 	const [editingSettings, setEditingSettings] = useState(false)
 	const [editLanguage, setEditLanguage] = useState('')
-	const [editColorMode, setEditColorMode] = useState('')
 	const [saveLoading, setSaveLoading] = useState(false)
 	const [saveError, setSaveError] = useState('')
 
@@ -65,7 +64,8 @@ export default function Dashboard() {
 	// Initial loading - sidebar only
 	useEffect(() => {
 		const token = localStorage.getItem('token')
-		if (!token) {
+
+		if (!token && pathname !== '/login') {
 			router.push('/login')
 			return
 		}
@@ -77,12 +77,12 @@ export default function Dashboard() {
 		]).finally(() => {
 			setSidebarLoading(false)
 		})
-	}, [])
+	}, [router, pathname])
 
 	// Conditional loading depending on active section
 	useEffect(() => {
 		const token = localStorage.getItem('token')
-		if (!token) {
+		if (!token && pathname !== '/login') {
 			router.push('/login')
 			return
 		}
@@ -90,7 +90,7 @@ export default function Dashboard() {
 		if (activeSection === 'documents') {
 			fetchDocuments()
 		}
-	}, [activeSection])
+	}, [activeSection, router, pathname])
 
 	// Load specific document
 	useEffect(() => {
@@ -226,8 +226,7 @@ export default function Dashboard() {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
-					language: editLanguage,
-					colorMode: editColorMode
+					language: editLanguage
 				})
 			})
 
@@ -241,8 +240,7 @@ export default function Dashboard() {
 			}
 
 			setUserSettings({
-				language: editLanguage,
-				colorMode: editColorMode
+				language: editLanguage
 			})
 
 			setEditingSettings(false)
@@ -257,14 +255,12 @@ export default function Dashboard() {
 	const cancelEdit = () => {
 		setEditingSettings(false)
 		setEditLanguage(userSettings?.language || '')
-		setEditColorMode(userSettings?.colorMode || '')
 		setSaveError('')
 	}
 
 	const startEdit = () => {
 		setEditingSettings(true)
 		setEditLanguage(userSettings?.language || '')
-		setEditColorMode(userSettings?.colorMode || '')
 	}
 
 	// Fetch document content
@@ -274,7 +270,7 @@ export default function Dashboard() {
 			setContentError('')
 
 			const token = localStorage.getItem('token')
-			if (!token) {
+			if (!token && pathname !== '/login') {
 				router.push('/login')
 				return
 			}
@@ -366,7 +362,7 @@ export default function Dashboard() {
 			setProfileError('');
 			fetchUserSettings().finally(() => setProfileLoading(false));
 		}
-		
+
 		if (section === 'documents') {
 			setSelectedDocument(null)
 		}
@@ -429,7 +425,6 @@ export default function Dashboard() {
 					profileError={profileError}
 					editingSettings={editingSettings}
 					editLanguage={editLanguage}
-					editColorMode={editColorMode}
 					saveLoading={saveLoading}
 					saveError={saveError}
 					documents={documents}
@@ -447,7 +442,6 @@ export default function Dashboard() {
 					onCancelEditSettings={cancelEdit}
 					onSaveUserSettings={saveUserSettings}
 					onEditLanguageChange={setEditLanguage}
-					onEditColorModeChange={setEditColorMode}
 					onSectionChange={handleSectionChange}
 					onDocumentSelect={handleDocumentSelect}
 					onDeleteClick={handleDeleteClick}

@@ -11,7 +11,6 @@ interface Document {
 
 interface UserSettings {
   language: string
-  colorMode: string
 }
 
 interface User {
@@ -34,7 +33,6 @@ interface MainContentProps {
   profileError: string
   editingSettings: boolean
   editLanguage: string
-  editColorMode: string
   documents: Document[]
   documentsLoading: boolean
   documentsError: string
@@ -47,7 +45,6 @@ interface MainContentProps {
   onCancelEditSettings: () => void
   onSaveUserSettings: () => void
   onEditLanguageChange: (lang: string) => void
-  onEditColorModeChange: (mode: string) => void
   onSectionChange: (section: 'profile' | 'create' | 'documents' | 'document') => void
   onDocumentSelect: (doc: Document) => void
   onDeleteClick: (id: string) => void
@@ -107,14 +104,12 @@ export default function MainContent(props: MainContentProps) {
     profileError,
     editingSettings,
     editLanguage,
-    editColorMode,
     userSettings,
     userInfo,
     onStartEditSettings,
     onCancelEditSettings,
     onSaveUserSettings,
     onEditLanguageChange,
-    onEditColorModeChange,
     onSectionChange,
   } = props
 
@@ -281,19 +276,6 @@ export default function MainContent(props: MainContentProps) {
                           <option value="es">🇪🇸 Español</option>
                         </select>
                       </div>
-                      <div className="form-group">
-                        <label className="form-label">
-                          🎨 Mode couleur:
-                        </label>
-                        <select
-                          value={editColorMode}
-                          onChange={e => onEditColorModeChange(e.target.value)}
-                          className="form-select"
-                        >
-                          <option value="light">☀️ Clair</option>
-                          <option value="dark">🌙 Sombre</option>
-                        </select>
-                      </div>
                       {saveError && (
                         <div className="error-message">
                           ❌ {saveError}
@@ -320,7 +302,6 @@ export default function MainContent(props: MainContentProps) {
                   ) : (
                     <div>
                       <p><strong>Langue:</strong> {userSettings.language === 'fr' ? '🇫🇷 Français' : userSettings.language === 'en' ? '🇺🇸 English' : '🇪🇸 Español'}</p>
-                      <p><strong>Mode:</strong> {userSettings.colorMode === 'light' ? '☀️ Clair' : '🌙 Sombre'}</p>
                       <button
                         onClick={onStartEditSettings}
                         className="auth-button-primary"

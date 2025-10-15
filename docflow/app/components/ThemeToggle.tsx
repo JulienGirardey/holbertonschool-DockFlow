@@ -2,6 +2,16 @@
 
 import { useState, useEffect } from 'react';
 
+function setFavicon(theme: 'dark' | 'light') {
+  const head = document.head;
+  let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
+  if (link) head.removeChild(link);
+  link = document.createElement('link');
+  link.rel = 'icon';
+  link.href = theme === 'dark' ? '/favicon-dark.ico' : '/favicon-light.ico';
+  head.appendChild(link);
+}
+
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isClient, setIsClient] = useState(false);
@@ -16,7 +26,14 @@ export default function ThemeToggle() {
     const initialTheme = savedTheme || systemTheme;
     setTheme(initialTheme);
     applyTheme(initialTheme);
+	setFavicon(initialTheme);
   }, []);
+
+  useEffect(() => {
+	if (isClient) {
+		setFavicon(theme);
+	}
+  }, [theme, isClient]);
 
   const applyTheme = (newTheme: 'light' | 'dark') => {
     const root = document.documentElement;
