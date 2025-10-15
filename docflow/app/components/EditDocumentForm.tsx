@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface Document {
   id: string
@@ -34,6 +35,7 @@ export default function EditDocumentForm({
   const [editedContent, setEditedContent] = useState(documentContent)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const router = useRouter()
 
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiGenerating, setAiGenerating] = useState(false)
@@ -54,6 +56,7 @@ export default function EditDocumentForm({
 
   const handleSaveAndExit = async () => {
     await onSave(editedTitle, editedContent)
+    onCancel()
   }
 
   const handleGenerateAI = async () => {
