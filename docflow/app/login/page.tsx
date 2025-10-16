@@ -39,8 +39,6 @@ export default function LoginPage() {
     setError('')
 
     try {
-
-			await new Promise(resolve => setTimeout(resolve, 2000))
       
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -100,15 +98,15 @@ export default function LoginPage() {
           }}
           className="back-button"
         >
-          ← Back
+          ← Retour
         </button>
 
         <div className="login-card">
           {/* Header */}
           <div>
-            <h2 className="login-title">Welcome Back!</h2>
+            <h2 className="login-title">Bon Retour!</h2>
             <p className="login-subtitle">
-              Sign in to create amazing documents with AI
+              Enregistrez-vous pour créer d'incroyables documents
             </p>
           </div>
 
@@ -121,7 +119,7 @@ export default function LoginPage() {
           </div>
 
           <h3 className="login-form-title">
-            Sign in with your email
+            Enregistrez-vous avec votre email
           </h3>
 
           {/* Message d'erreur */}
@@ -139,7 +137,7 @@ export default function LoginPage() {
                 {...register('email')}
                 className="login-input"
                 type="email"
-                placeholder="📧 Your email address"
+                placeholder="📧 Votre addresse email"
               />
               {errors.email && (
                 <p className="field-error">⚠️ {errors.email.message}</p>
@@ -152,7 +150,7 @@ export default function LoginPage() {
                 {...register('password')}
                 className="login-input" 
                 type="password"
-                placeholder="🔒 Your password"
+                placeholder="🔒 Votre mot de passe"
               />
               {errors.password && (
                 <p className="field-error">⚠️ {errors.password.message}</p>
@@ -161,7 +159,7 @@ export default function LoginPage() {
 
             {/* Lien "Forgot password ?" */}
             <div className="forgot-link">
-              <a href="#">Forgot your password?</a>
+              <a href="#">Mot de passe oublié ?</a>
             </div>
 
             {/* Bouton Submit */}
@@ -170,7 +168,7 @@ export default function LoginPage() {
               className="login-button"
               disabled={isLoading}
             >
-              {isLoading ? '🔄 Signing in...' : 'Login!'}
+              {isLoading ? '🔄 Connexion...' : 'Se connecter!'}
             </button>
           </form>
 
@@ -185,7 +183,7 @@ export default function LoginPage() {
               color: 'var(--gray-600)', 
               fontSize: 'var(--text-sm)' 
             }}>
-              Don&apos;t have an account yet?{' '}
+              Vous n'avez pas encore de compte ?{' '}
               <button
                 onClick={() => router.push('/register')}
                 style={{
@@ -197,7 +195,7 @@ export default function LoginPage() {
                   textDecoration: 'underline'
                 }}
               >
-                Create one for free!
+                Créé en un gratuitement !
               </button>
             </p>
           </div>

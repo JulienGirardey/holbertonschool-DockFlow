@@ -1,6 +1,7 @@
 import CreateDocumentForm from './CreateDocumentForm'
 import EditDocumentForm from './EditDocumentForm'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Document {
   id: string
@@ -116,6 +117,7 @@ export default function MainContent(props: MainContentProps) {
   const [saveLoading, setSaveLoading] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [showAi, setShowAi] = useState(false)
+  const { i18n, t } = useTranslation()
 
   const handleSave = async (title: string, content: string) => {
     setSaveLoading(true)
@@ -182,14 +184,14 @@ export default function MainContent(props: MainContentProps) {
             <>
               <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
                 <h2 className="section-title" style={{ margin: 0 }}>
-                  {selectedDocument.title}
+                  {t('Titre du profil')}
                 </h2>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
                   <button
                     onClick={onStartEditDocument}
                     className="auth-button-primary"
                   >
-                    ✏️ Modifier
+                    ✏️ {t('Modifier')}
                   </button>
                 </div>
               </div>
@@ -198,7 +200,7 @@ export default function MainContent(props: MainContentProps) {
                 fontSize: 'var(--text-sm)',
                 marginBottom: 'var(--space-lg)'
               }}>
-                📅 Créé le {new Date(selectedDocument.createdAt).toLocaleDateString('fr-FR', {
+                📅 {t('Créé le')} {new Date(selectedDocument.createdAt).toLocaleDateString(i18n.language, {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -209,7 +211,7 @@ export default function MainContent(props: MainContentProps) {
               <div className="document-content-area">
                 {loadingContent ? (
                   <p style={{ textAlign: 'center', color: 'var(--gray-600)', padding: 'var(--space-2xl)' }}>
-                    🔄 Chargement du contenu...
+                    🔄 {t('chargement du profil')}...
                   </p>
                 ) : contentError ? (
                   <p style={{ color: '#ef4444', textAlign: 'center', padding: 'var(--space-2xl)' }}>
@@ -230,11 +232,11 @@ export default function MainContent(props: MainContentProps) {
       {activeSection === 'profile' && (
         <div>
           <div className="section-header">
-            <h2 className="section-title">👤 Mon Profil</h2>
+            <h2 className="section-title">{t('Mon profil')}</h2>
           </div>
           <div className="profile-content">
             {profileLoading ? (
-              <SectionLoading message="Chargement du profil..." />
+              <SectionLoading message={t('chargment du profil')} />
             ) : profileError ? (
               <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
                 <p style={{ color: '#ef4444' }}>❌ {profileError}</p>
@@ -243,28 +245,28 @@ export default function MainContent(props: MainContentProps) {
                   className="auth-button-primary"
                   style={{ marginTop: 'var(--space-md)' }}
                 >
-                  🔄 Réessayer
+                  🔄 {t('Réessayer')}
                 </button>
               </div>
             ) : (userSettings && userInfo) ? (
               <div>
                 <div className="profile-section">
                   <h3 className="profile-section-title">
-                    🙋‍♂️ Informations personnelles
+                    🙋‍♂️ {t('Info personnelle')}
                   </h3>
-                  <p><strong>Prénom:</strong> {userInfo.firstName}</p>
-                  <p><strong>Nom:</strong> {userInfo.lastName}</p>
-                  <p><strong>Email:</strong> {userInfo.email}</p>
+                  <p><strong>{t('Prénom')}:</strong> {userInfo.firstName}</p>
+                  <p><strong>{t('Nom')}:</strong> {userInfo.lastName}</p>
+                  <p><strong>{t('email')}:</strong> {userInfo.email}</p>
                 </div>
                 <div className="profile-section">
                   <h3 className="profile-section-title">
-                    ⚙️ Paramètres de l'application
+                    ⚙️ {t("Paramètres de l'application")}
                   </h3>
                   {editingSettings ? (
                     <div className="settings-form">
                       <div className="form-group">
                         <label className="form-label">
-                          🌐 Langue:
+                          {t('Langue')}:
                         </label>
                         <select
                           value={editLanguage}
@@ -273,7 +275,6 @@ export default function MainContent(props: MainContentProps) {
                         >
                           <option value="en">🇺🇸 English</option>
                           <option value="fr">🇫🇷 Français</option>
-                          <option value="es">🇪🇸 Español</option>
                         </select>
                       </div>
                       {saveError && (
@@ -288,26 +289,26 @@ export default function MainContent(props: MainContentProps) {
                           className="cta-button"
                           style={{ width: 'auto' }}
                         >
-                          {saveLoading ? '🔄 Sauvegarde...' : '💾 Sauvegarder'}
+                          {saveLoading ? t('🔄 Sauvegarde...') : `💾 ${t('Sauvegarder')}`}
                         </button>
                         <button
                           onClick={onCancelEditSettings}
                           disabled={saveLoading}
                           className="auth-button-outline"
                         >
-                          ❌ Annuler
+                          ❌ {t('Retour')}
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <p><strong>Langue:</strong> {userSettings.language === 'fr' ? '🇫🇷 Français' : userSettings.language === 'en' ? '🇺🇸 English' : '🇪🇸 Español'}</p>
+                      <p><strong>{t('Langue')}:</strong> {userSettings.language === 'fr' ? '🇫🇷 Français' : userSettings.language === 'en' ? '🇺🇸 English' : '🇪🇸 Español'}</p>
                       <button
                         onClick={onStartEditSettings}
                         className="auth-button-primary"
                         style={{ marginTop: 'var(--space-lg)' }}
                       >
-                        ✏️ Modifier les paramètres
+                        ✏️ {t('Modifier les paramètres')}
                       </button>
                     </div>
                   )}
@@ -332,10 +333,10 @@ export default function MainContent(props: MainContentProps) {
       {activeSection === 'documents' && (
         <div>
           <div className="section-header">
-            <h2 className="section-title">Mes Documents ({documents.length})</h2>
+            <h2 className="section-title">{t('Mes documents')} ({documents.length})</h2>
           </div>
           {documentsLoading ? (
-            <SectionLoading message="Chargement des documents..." />
+            <SectionLoading message={t('chargement des documents')} />
           ) : documentsError ? (
             <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
               <p style={{ color: '#ef4444' }}>❌ {documentsError}</p>
@@ -344,18 +345,18 @@ export default function MainContent(props: MainContentProps) {
                 className="auth-button-primary"
                 style={{ marginTop: 'var(--space-md)' }}
               >
-                🔄 Réessayer
+                🔄 {t('Réessayer')}
               </button>
             </div>
           ) : documents.length === 0 ? (
             <div className="empty-state">
               <div style={{ fontSize: '4rem', marginBottom: 'var(--space-lg)' }}>📄</div>
-              <p className="empty-state-text">Vous n'avez pas encore de documents</p>
+              <p className="empty-state-text">{t('Pas de document trouvé')}</p>
               <button
                 onClick={() => props.onSectionChange('create')}
                 className="cta-button"
               >
-                Créer votre premier document
+                {t('créé votre première documentation')}
               </button>
             </div>
           ) : (
@@ -370,14 +371,13 @@ export default function MainContent(props: MainContentProps) {
                       {doc.title}
                     </h3>
                     <p className="document-date">
-                      📅 Créé le {new Date(doc.createdAt).toLocaleDateString('fr-FR', {
+                      📅 {t('Créé le')} {new Date(doc.createdAt).toLocaleDateString(i18n.language, {
                         year: 'numeric',
                         month: 'long',
-                        day: 'numeric'
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
                       })}
-                    </p>
-                    <p className="document-preview-text">
-                      Cliquer pour lire et modifier
                     </p>
                   </div>
                   <div className="document-actions">
@@ -385,12 +385,12 @@ export default function MainContent(props: MainContentProps) {
                       onClick={() => onDocumentSelect(doc)}
                       className="doc-action-btn doc-open-btn"
                     >
-                      📖 Ouvrir
+                      📖 {t('Ouvrir')}
                     </button>
                     <button
                       onClick={() => onDeleteClick(doc.id)}
                       className="doc-action-btn doc-delete-btn"
-                      title="Supprimer le document"
+                      title={t('Supprimer')}
                     >
                       🗑️
                     </button>

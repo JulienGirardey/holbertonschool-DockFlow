@@ -5,6 +5,8 @@ import { useRouter, usePathname } from 'next/navigation'
 import Sidebar from '../components/sidebar'
 import MainContent from '../components/MainContent'
 import Header from '../components/Header'
+import { useTranslation } from 'react-i18next'
+import '../../lib/i18n'
 
 interface Document {
 	id: string
@@ -41,6 +43,7 @@ export default function Dashboard() {
 
 	const router = useRouter()
 	const pathname = usePathname()
+	const { t, i18n } = useTranslation()
 
 	const [editingSettings, setEditingSettings] = useState(false)
 	const [editLanguage, setEditLanguage] = useState('')
@@ -60,6 +63,27 @@ export default function Dashboard() {
 	const [isDeleting, setIsDeleting] = useState(false)
 
 	const [deleteError, setDeleteError] = useState('')
+
+	useEffect(() => {
+		const fetchLang = async () => {
+			try {
+				const token = localStorage.getItem('token')
+				if (!token) return
+				const response = await fetch('/api/settings', {
+					headers: { 'Authorization': `Bearer ${token}` }
+				})
+				if (response.ok) {
+					const data = await response.json()
+					if (data.language && i18n.language !== data.language) {
+						i18n.changeLanguage(data.language)
+					}
+				}
+			} catch (e) {
+				// ignore
+			}
+		}
+		fetchLang()
+	}, [i18n])
 
 	// Initial loading - sidebar only
 	useEffect(() => {
@@ -227,8 +251,10 @@ export default function Dashboard() {
 				},
 				body: JSON.stringify({
 					language: editLanguage
-				})
+				}),
 			})
+
+			i18n.changeLanguage(editLanguage)
 
 			if (!response.ok) {
 				if (response.status === 401) {
@@ -454,10 +480,10 @@ export default function Dashboard() {
 					<div className="delete-modal">
 						<div className="delete-icon">⚠️</div>
 						<h3 className="delete-title">
-							Delete this document?
+							{t('Supprimer ce document ?')}
 						</h3>
 						<p className="delete-description">
-							This action is irreversible. The document <strong>"{documents.find(d => d.id === deleteConfirm)?.title}"</strong> will be permanently deleted.
+							{t('Cette action est irréversible. Le document')} <strong>"{documents.find(d => d.id === deleteConfirm)?.title}"</strong> {t('Sera définitivement supprimé.')}
 						</p>
 
 						<div className="delete-actions">
@@ -467,7 +493,7 @@ export default function Dashboard() {
 								className="auth-button-outline"
 								style={{ opacity: isDeleting ? 0.5 : 1 }}
 							>
-								Cancel
+								{t('Cancel')}
 							</button>
 
 							<button
@@ -491,10 +517,10 @@ export default function Dashboard() {
 											borderRadius: '50%',
 											animation: 'spin 1s linear infinite'
 										}}></div>
-										Deleting...
+										{t('Suppression...')}
 									</>
 								) : (
-									<>Delete</>
+									<>{t('Supprimer')}</>
 								)}
 							</button>
 						</div>

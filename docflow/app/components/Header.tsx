@@ -1,10 +1,12 @@
 import ThemeToggle from './ThemeToggle'
+import { useTranslation } from 'react-i18next'
 
 interface HeaderProps {
   onBack: () => void
 }
 
 export default function Header({ onBack }: HeaderProps) {
+	const { i18n, t } = useTranslation()
   return (
     <div className="dashboard-theme-toggle">
       <button
@@ -12,7 +14,7 @@ export default function Header({ onBack }: HeaderProps) {
         className="back-button auth-button-outline"
         style={{ padding: 'var(--space-sm)', minWidth: 'auto' }}
       >
-        ← Retour
+        ← {t('Retour')}
       </button>
       <ThemeToggle />
     </div>

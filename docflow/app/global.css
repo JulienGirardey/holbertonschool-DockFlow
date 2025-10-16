@@ -506,15 +506,16 @@ body {
 .auth-button-outline {
   background: linear-gradient(135deg, var(--gray-50), var(--summer-sand));
   color: var(--gray-700);
-  padding: 5px;
+  padding: 8px;
   border-radius: var(--radius-xl);
   border: 2px solid var(--primary-300);
   font-weight: 600;
-	width: 6em;
+	width: 8em;
   cursor: pointer;
   font-size: var(--text-base);
   transition: var(--transition-fast);
   box-shadow: var(--shadow-sm);
+	white-space: nowrap;
 }
 
 .auth-button-outline:hover {
@@ -1723,6 +1724,10 @@ input, textarea, select {
   color: var(--gray-600);
   margin-right: var(--space-md);
   text-align: right;
+}
+
+.main {
+	margin: 10px
 }
 
 .save-indicator.saving {

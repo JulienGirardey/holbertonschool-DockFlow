@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 
 interface CreateDocumentFormProps {
   onDocumentCreated: (document: any) => void
@@ -14,6 +15,7 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState('')
   const router = useRouter()
+  const { i18n, t } = useTranslation()
 
   const handleCreateDocument = useCallback(async () => {
     try {
@@ -68,7 +70,7 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
           color: 'var(--gray-900)',
           marginBottom: 'var(--space-md)'
         }}>
-          Créer un nouveau document
+          {t('Créer un nouveau document')}
         </h2>
 
         <p style={{
@@ -76,7 +78,7 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
           fontSize: 'var(--text-base)',
           marginBottom: 'var(--space-xl)'
         }}>
-          Notre IA va transformer votre idée en document professionnel
+          {t('Notre IA va transformer votre idée en document professionnel')}
         </p>
       </div>
 
@@ -89,7 +91,7 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
           borderRadius: 'var(--radius-lg)',
           marginBottom: 'var(--space-lg)'
         }}>
-          <strong>Erreur:</strong> {createError}
+          <strong>{('Erreur')}:</strong> {createError}
         </div>
       )}
 
@@ -97,7 +99,7 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
         <div>
           <input
             type="text"
-            placeholder="Titre de votre document..."
+            placeholder={t('Titre de votre document...')}
             value={newDocTitle}
             onChange={(e) => setNewDocTitle(e.target.value)}
             className="create-input"
@@ -106,8 +108,7 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
 
         <div>
           <textarea
-            placeholder="Contenu de votre document... 
-            Conseil: Décrivez votre idée, notre IA l'améliorera pour vous !"
+            placeholder={t('Contenu de votre document... Conseil: Décrivez votre idée, notre IA l\'améliorera pour vous !')}
             value={newDocContent}
             onChange={(e) => setNewDocContent(e.target.value)}
             className="create-textarea"
@@ -125,7 +126,7 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
             opacity: (createLoading || !newDocTitle.trim() || !newDocContent.trim()) ? 0.5 : 1
           }}
         >
-          {createLoading ? '🔄 Création en cours...' : 'Créer le document'}
+          {createLoading ? t('🔄 Création en cours...') : t('Créer le document')}
         </button>
       </form>
     </div>

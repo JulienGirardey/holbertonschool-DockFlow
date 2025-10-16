@@ -102,17 +102,17 @@ export default function RegisterPage() {
           }}
           className="back-button"
         >
-          ← Back
+          ← Retour
         </button>
 
         {/* ✅ Card centrée avec le nouveau style */}
         <div className="register-card">
           {/* Header */}
           <div>
-            <h2 className="login-title">Join DocFlow!</h2>
-            <p className="login-subtitle">
-              Create your account to start making amazing documents with AI
-            </p>
+			<h2 className="login-title">Créez votre compte DocFlow&nbsp;!</h2>
+			<p className="login-subtitle">
+			  Créez votre compte pour commencer à créer des documents incroyables avec l’IA
+			</p>
           </div>
 
           {/* Icon */}
@@ -122,9 +122,9 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <h3 className="login-form-title">
-        	Create your free account
-          </h3>
+		  <h3 className="login-form-title">
+			Créez votre compte gratuit
+		  </h3>
 
           {/* Message d'erreur */}
           {error && (
@@ -140,10 +140,10 @@ export default function RegisterPage() {
               <div className="name-field">
                 <input
                   {...register('firstName')}
-                  className="login-input"
-                  type="text"
-                  placeholder="👤 First Name"
-                />
+				  className="login-input"
+				  type="text"
+				  placeholder="👤 Prénom"
+				/>
                 {errors.firstName && (
                   <p className="field-error">⚠️ {errors.firstName.message}</p>
                 )}
@@ -152,10 +152,10 @@ export default function RegisterPage() {
               <div className="name-field">
                 <input
                   {...register('lastName')}
-                  className="login-input"
-                  type="text"
-                  placeholder="👥 Last Name"
-                />
+				  className="login-input"
+				  type="text"
+				  placeholder="👥 Nom de famille"
+				/>
                 {errors.lastName && (
                   <p className="field-error">⚠️ {errors.lastName.message}</p>
                 )}
@@ -166,10 +166,10 @@ export default function RegisterPage() {
             <div>
               <input
                 {...register('email')}
-                className="login-input"
-                type="email"
-                placeholder="📧 Your email address"
-              />
+				className="login-input"
+				type="email"
+				placeholder="📧 Votre adresse e-mail"
+			  />
               {errors.email && (
                 <p className="field-error">⚠️ {errors.email.message}</p>
               )}
@@ -179,10 +179,10 @@ export default function RegisterPage() {
             <div>
               <input
                 {...register('password')}
-                className="login-input" 
-                type="password"
-                placeholder="🔒 Create a password"
-              />
+				className="login-input" 
+				type="password"
+				placeholder="🔒 Créez un mot de passe"
+			  />
               {errors.password && (
                 <p className="field-error">⚠️ {errors.password.message}</p>
               )}
@@ -192,10 +192,10 @@ export default function RegisterPage() {
             <div>
               <input
                 {...register('confirmPassword')}
-                className="login-input" 
-                type="password"
-                placeholder="🔐 Confirm your password"
-              />
+				className="login-input" 
+				type="password"
+				placeholder="🔐 Confirmez votre mot de passe"
+			  />
               {errors.confirmPassword && (
                 <p className="field-error">⚠️ {errors.confirmPassword.message}</p>
               )}
@@ -207,7 +207,7 @@ export default function RegisterPage() {
               className="login-button"
               disabled={isLoading}
             >
-              {isLoading ? '🔄 Creating account...' : 'Register!'}
+			  {isLoading ? '🔄 Création du compte...' : 'Créer mon compte !'}
             </button>
           </form>
 
@@ -218,25 +218,25 @@ export default function RegisterPage() {
             padding: 'var(--space-md)',
             borderTop: '1px solid var(--gray-200)'
           }}>
-            <p style={{ 
-              color: 'var(--gray-600)', 
-              fontSize: 'var(--text-sm)' 
-            }}>
-              Already have an account?{' '}
-              <button
-                onClick={() => router.push('/login')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--primary-600)',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  textDecoration: 'underline'
-                }}
-              >
-                Sign in here!
-              </button>
-            </p>
+			<p style={{ 
+			  color: 'var(--gray-600)', 
+			  fontSize: 'var(--text-sm)' 
+			}}>
+			  Vous avez déjà un compte ?{' '}
+			  <button
+				onClick={() => router.push('/login')}
+				style={{
+				  background: 'none',
+				  border: 'none',
+				  color: 'var(--primary-600)',
+				  fontWeight: '600',
+				  cursor: 'pointer',
+				  textDecoration: 'underline'
+				}}
+			  >
+				Connectez-vous ici !
+			  </button>
+			</p>
           </div>
         </div>
       </div>
