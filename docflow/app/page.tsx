@@ -102,7 +102,7 @@ export default function HomePage() {
 								onClick={handleRegister}
 								className="cta-button"
 							>
-								Commencer gratuitement
+								S'inscrire
 							</button>
 						</div>
 					)}
@@ -141,7 +141,7 @@ export default function HomePage() {
 								</div>
 
 								<div className="summer-card-2">
-									<div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💾</div>
+									<div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
 									<h3 style={{
 										fontSize: '1.5rem',
 										fontWeight: 'bold',
@@ -176,7 +176,7 @@ export default function HomePage() {
 								onClick={handleRegister}
 								className="cta-button"
 							>
-								Découvrir DocFlow
+								S'inscrire
 							</button>
 						</div>
 					)}
@@ -245,7 +245,7 @@ export default function HomePage() {
 								onClick={handleRegister}
 								className="cta-button"
 							>
-								Commencer maintenant
+								S'inscrire
 							</button>
 						</div>
 					)}
