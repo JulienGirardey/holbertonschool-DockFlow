@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 
 interface Document {
   id: string
@@ -36,6 +37,7 @@ export default function EditDocumentForm({
   const titleInputRef = useRef<HTMLInputElement>(null)
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
+  const { i18n, t } = useTranslation()
 
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiGenerating, setAiGenerating] = useState(false)
@@ -118,7 +120,7 @@ export default function EditDocumentForm({
               color: showAI ? 'white' : 'var(--gray-700)'
             }}
           >
-            {showAI ? '🤖 Fermer IA' : '🤖 Assistant IA'}
+            {showAI ? t('Fermer IA') : t('Assistant IA')}
           </button>
           <button
             onClick={handleSaveAndExit}
@@ -126,13 +128,13 @@ export default function EditDocumentForm({
             className="cta-button"
             style={{ width: 'auto' }}
           >
-            {saveLoading ? '🔄 Sauvegarde...' : '💾 Sauvegarder'}
+            {saveLoading ? t('Sauvegarde...') : t('Sauvegarder')}
           </button>
           <button
             onClick={onCancel}
             className="auth-button-outline"
           >
-            ❌ Annuler
+            ❌ {t('Annuler')}
           </button>
         </div>
       </div>
@@ -144,7 +146,7 @@ export default function EditDocumentForm({
                 fontSize: 'var(--text-sm)',
                 marginBottom: 'var(--space-lg)'
               }}>
-                📅 Créé le {new Date(document.createdAt).toLocaleDateString('fr-FR', {
+                📅 {t('Créé le')} {new Date(document.createdAt).toLocaleDateString(i18n.language, {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -165,7 +167,7 @@ export default function EditDocumentForm({
               className="aiPromptTextarea"
               value={aiPrompt}
               onChange={e => setAiPrompt(e.target.value)}
-              placeholder="Describe what you want the AI to generate..."
+              placeholder={t('Décrivez ce que vous souhaitez que l\'IA génère...')}
               disabled={aiGenerating}
               rows={3}
             />
@@ -174,7 +176,7 @@ export default function EditDocumentForm({
               disabled={aiGenerating}
               className="cta-button mx-auto generate-IA"
             >
-              {aiGenerating ? 'Generating...' : 'Generate'}
+              {aiGenerating ? t('Generation...') : t('Générer')}
             </button>
             {aiError && <div className="error-message">{aiError}</div>}
           </div>
@@ -193,7 +195,7 @@ export default function EditDocumentForm({
           value={editedContent}
           onChange={handleContentChange}
           className="content-textarea"
-          placeholder="✍️ Commencez à écrire votre contenu..."
+          placeholder={t('Commencez à écrire votre contenu...')}
           style={{ minHeight: '400px' }}
         />
       </div>
