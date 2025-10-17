@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { UserPlus } from 'lucide-react'
+import ThemeToggle from '../components/ThemeToggle'
 
 const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -69,133 +70,173 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="login-container">
-      <div style={{ maxWidth: '28rem', width: '100%', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-        
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>
-            Sign up
-          </h2>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-            Create your account to start making docs
-          </p>
+    <div className="animate-fadeInUp">
+      <div className="login-container">
+        {/* ✅ Theme Toggle - Position fixe en haut à droite */}
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 100
+        }}>
+          <ThemeToggle />
         </div>
 
-        <div className="login-card">
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-            <div style={{ backgroundColor: '#dbeafe', padding: '0.75rem', borderRadius: '50%' }}>
-              <UserPlus style={{ height: '1.5rem', width: '1.5rem', color: '#2563eb' }} />
+        {/* ✅ Bouton retour */}
+        <button
+          onClick={() => router.push('/')}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '20px',
+            background: 'transparent',
+            border: '2px solid var(--gray-300)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-sm) var(--space-md)',
+            color: 'var(--gray-700)',
+            fontSize: 'var(--text-sm)',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'var(--transition-fast)',
+            zIndex: 100
+          }}
+          className="back-button"
+        >
+          ← Retour
+        </button>
+
+        {/* ✅ Card centrée avec le nouveau style */}
+        <div className="register-card">
+          {/* Header */}
+          <div>
+			<h2 className="login-title">Créez votre compte DocFlow&nbsp;!</h2>
+			<p className="login-subtitle">
+			  Créez votre compte pour commencer à créer des documents incroyables avec l’IA
+			</p>
+          </div>
+
+          {/* Icon */}
+          <div className="login-icon-container">
+            <div className="login-icon-bg">
+              <UserPlus />
             </div>
           </div>
 
-          <h3 style={{ textAlign: 'center', fontSize: '1.125rem', fontWeight: '500', color: '#111827', marginBottom: '1.5rem' }}>
-            Create your account
-          </h3>
+		  <h3 className="login-form-title">
+			Créez votre compte gratuit
+		  </h3>
 
+          {/* Message d'erreur */}
           {error && (
-            <div style={{ 
-              marginBottom: '1rem', 
-              padding: '0.75rem', 
-              backgroundColor: '#fef2f2', 
-              border: '1px solid #fca5a5', 
-              color: '#dc2626', 
-              borderRadius: '0.375rem' 
-            }}>
-              {error}
+            <div className="login-error">
+              <strong>Oops!</strong> {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-            <div>
-              <input
-                {...register('firstName')}
-                type="text"
-                placeholder="First Name"
-                className="login-input"
-              />
-              {errors.firstName && (
-                <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                  {errors.firstName.message}
-                </p>
-              )}
+          {/* FORMULAIRE */}
+          <form onSubmit={handleSubmit(onSubmit)} className="login-form">
+            {/* Nom et Prénom sur la même ligne */}
+            <div className="name-row">
+              <div className="name-field">
+                <input
+                  {...register('firstName')}
+				  className="login-input"
+				  type="text"
+				  placeholder="👤 Prénom"
+				/>
+                {errors.firstName && (
+                  <p className="field-error">⚠️ {errors.firstName.message}</p>
+                )}
+              </div>
+              
+              <div className="name-field">
+                <input
+                  {...register('lastName')}
+				  className="login-input"
+				  type="text"
+				  placeholder="👥 Nom de famille"
+				/>
+                {errors.lastName && (
+                  <p className="field-error">⚠️ {errors.lastName.message}</p>
+                )}
+              </div>
             </div>
 
-            <div>
-              <input
-                {...register('lastName')}
-                type="text"
-                placeholder="Last Name"
-                className="login-input"
-              />
-              {errors.lastName && (
-                <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                  {errors.lastName.message}
-                </p>
-              )}
-            </div>
-
+            {/* Champ Email */}
             <div>
               <input
                 {...register('email')}
-                type="email"
-                placeholder="Email"
-                className="login-input"
-              />
+				className="login-input"
+				type="email"
+				placeholder="📧 Votre adresse e-mail"
+			  />
               {errors.email && (
-                <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                  {errors.email.message}
-                </p>
+                <p className="field-error">⚠️ {errors.email.message}</p>
               )}
             </div>
 
+            {/* Champ Password */}
             <div>
               <input
                 {...register('password')}
-                type="password"
-                placeholder="Password"
-                className="login-input"
-              />
+				className="login-input" 
+				type="password"
+				placeholder="🔒 Créez un mot de passe"
+			  />
               {errors.password && (
-                <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                  {errors.password.message}
-                </p>
+                <p className="field-error">⚠️ {errors.password.message}</p>
               )}
             </div>
 
+            {/* Champ Confirm Password */}
             <div>
               <input
                 {...register('confirmPassword')}
-                type="password"
-                placeholder="Confirm Password"
-                className="login-input"
-              />
+				className="login-input" 
+				type="password"
+				placeholder="🔐 Confirmez votre mot de passe"
+			  />
               {errors.confirmPassword && (
-                <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#dc2626' }}>
-                  {errors.confirmPassword.message}
-                </p>
+                <p className="field-error">⚠️ {errors.confirmPassword.message}</p>
               )}
             </div>
 
-            <button
+            {/* Bouton Submit */}
+            <button 
               type="submit"
-              disabled={isLoading}
               className="login-button"
+              disabled={isLoading}
             >
-              {isLoading ? 'Creating account...' : 'Create Account'}
+			  {isLoading ? '🔄 Création du compte...' : 'Créer mon compte !'}
             </button>
           </form>
 
-          <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-              Already have an account?{' '}
-              <a 
-                href="/login" 
-                style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '500' }}
-              >
-                Sign in here
-              </a>
-            </p>
+          {/* Lien vers login */}
+          <div style={{ 
+            textAlign: 'center', 
+            marginTop: 'var(--space-lg)',
+            padding: 'var(--space-md)',
+            borderTop: '1px solid var(--gray-200)'
+          }}>
+			<p style={{ 
+			  color: 'var(--gray-600)', 
+			  fontSize: 'var(--text-sm)' 
+			}}>
+			  Vous avez déjà un compte ?{' '}
+			  <button
+				onClick={() => router.push('/login')}
+				style={{
+				  background: 'none',
+				  border: 'none',
+				  color: 'var(--primary-600)',
+				  fontWeight: '600',
+				  cursor: 'pointer',
+				  textDecoration: 'underline'
+				}}
+			  >
+				Connectez-vous ici !
+			  </button>
+			</p>
           </div>
         </div>
       </div>

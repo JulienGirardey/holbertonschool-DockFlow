@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { LogIn } from 'lucide-react'
+import ThemeToggle from '../components/ThemeToggle'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email format'),
@@ -19,12 +20,18 @@ export default function LoginPage() {
   const [error, setError]= useState('')
   const router = useRouter()
   
+  // Note: react-hook-form gère automatiquement les références
+  
   const {
     register,
     handleSubmit,
     formState: { errors }
   } = useForm<loginFormData>({
-    resolver: zodResolver(loginSchema)
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: ''
+    }
   })
 
   const onSubmit = async (data: loginFormData) => {
@@ -32,7 +39,6 @@ export default function LoginPage() {
     setError('')
 
     try {
-      console.log('Login data:', data)
       
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -60,45 +66,81 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-container">
-      <div className="max-w-md w-full space-y-8">
-        <div className='text-center'>
-          <h2 className='text-3xl font-bold text-gray-900'>Sign in</h2>
-          <p className='mt-2 text-sm text-gray-600'>
-            Make your own doc simply for free
-          </p>
+    <div className="animate-fadeInUp">
+      <div className="login-container">
+        {/* ✅ Theme Toggle - Position fixe en haut à droite */}
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 100
+        }}>
+          <ThemeToggle />
         </div>
 
-        <div className='bg-white p-8 rounded-lg shadow-md'>
-          <div className='flex justify-center mb-6'>
-            <div className='bg-blue-100 p-3 rounded-full'>
-              <LogIn className='h-6 w-6 text-blue-600' />
+        {/* ✅ Bouton retour */}
+        <button
+          onClick={() => router.push('/')}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '20px',
+            background: 'transparent',
+            border: '2px solid var(--gray-300)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-sm) var(--space-md)',
+            color: 'var(--gray-700)',
+            fontSize: 'var(--text-sm)',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'var(--transition-fast)',
+            zIndex: 100
+          }}
+          className="back-button"
+        >
+          ← Retour
+        </button>
+
+        <div className="login-card">
+          {/* Header */}
+          <div>
+            <h2 className="login-title">Bon Retour!</h2>
+            <p className="login-subtitle">
+              Enregistrez-vous pour créer d'incroyables documents
+            </p>
+          </div>
+
+          {/* Icon */}
+          {/* ✅ Version avec contrôle manuel complet */}
+          <div className="login-icon-container">  {/* ou .small, .large, .xl */}
+            <div className="login-icon-bg">
+              <LogIn className='login-icon' />  {/* ✅ CHANGÉ: Supprime les classes h-6 w-6 */}
             </div>
           </div>
 
-          <h3 className='text-center text-lg font-medium text-gray-900 mb-6'>
-            Sign in with email
+          <h3 className="login-form-title">
+            Enregistrez-vous avec votre email
           </h3>
 
           {/* Message d'erreur */}
           {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-              {error}
+            <div className="login-error">
+              <strong>Oops!</strong> {error}
             </div>
           )}
 
           {/* FORMULAIRE */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="login-form">
             {/* Champ Email */}
             <div>
               <input
                 {...register('email')}
                 className="login-input"
                 type="email"
-                placeholder="Email"
+                placeholder="📧 Votre addresse email"
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                <p className="field-error">⚠️ {errors.email.message}</p>
               )}
             </div>
 
@@ -108,18 +150,16 @@ export default function LoginPage() {
                 {...register('password')}
                 className="login-input" 
                 type="password"
-                placeholder="Password"
+                placeholder="🔒 Votre mot de passe"
               />
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                <p className="field-error">⚠️ {errors.password.message}</p>
               )}
             </div>
 
             {/* Lien "Forgot password ?" */}
-            <div className="text-right">
-              <a href="#" className="text-sm text-gray-600 hover:text-gray-900">
-                Forgot password ?
-              </a>
+            <div className="forgot-link">
+              <a href="#">Mot de passe oublié ?</a>
             </div>
 
             {/* Bouton Submit */}
@@ -128,9 +168,37 @@ export default function LoginPage() {
               className="login-button"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Get Started'}
+              {isLoading ? '🔄 Connexion...' : 'Se connecter!'}
             </button>
           </form>
+
+          {/* Lien vers register */}
+          <div style={{ 
+            textAlign: 'center', 
+            marginTop: 'var(--space-lg)',
+            padding: 'var(--space-md)',
+            borderTop: '1px solid var(--gray-200)'
+          }}>
+            <p style={{ 
+              color: 'var(--gray-600)', 
+              fontSize: 'var(--text-sm)' 
+            }}>
+              Vous n'avez pas encore de compte ?{' '}
+              <button
+                onClick={() => router.push('/register')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--primary-600)',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Créé en un gratuitement !
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     </div>

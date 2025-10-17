@@ -42,12 +42,10 @@ async function main() {
       {
         userId: user1.id,
         language: 'en',
-        colorMode: 'dark',
       },
       {
         userId: user2.id,
         language: 'fr',
-        colorMode: 'light',
       },
     ],
   })

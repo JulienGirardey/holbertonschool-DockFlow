@@ -27,8 +27,7 @@ export async function GET(req: NextRequest) {
 			select: {
 				id: true,
 				userId: true,
-				language: true,
-				colorMode: true
+				language: true
 			}
 		});
 
@@ -36,8 +35,7 @@ export async function GET(req: NextRequest) {
 		if (!settings) {
 			return NextResponse.json({
 				userId: userId,
-				language: "en",
-				colorMode: "light"
+				language: "en"
 			});
 		}
 
@@ -65,12 +63,12 @@ export async function PUT(req: NextRequest) {
 			);
 		}
 
-		const { colorMode, language } = await req.json();
+		const { language } = await req.json();
 
 		// validation of obligated field
-		if (!language || !colorMode) {
+		if (!language) {
 			return NextResponse.json(
-				{ error: "At least one field (language or colorMode) is required" },
+				{ error: "At least one field (language) is required" },
 				{ status: 400 }
 			);
 		}
@@ -79,18 +77,15 @@ export async function PUT(req: NextRequest) {
 		const settings = await prisma.settings.upsert({
 			where: { userId: userId },
 			update: {
-				language,
-				colorMode
+				language
 			},
 			create: {
 				userId,
-				language,
-				colorMode
+				language
 			},
 			select: {
 				id: true,
-				language: true,
-				colorMode: true
+				language: true
 			}
 		});
 

@@ -58,8 +58,7 @@ export async function POST(req: NextRequest) {
         await prisma.settings.create({
             data: {
                 userId: user.id,
-                language: 'en',
-                colorMode: 'light'
+                language: 'en'
             }
         });
 

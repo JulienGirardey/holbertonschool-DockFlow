@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from '../../../../generated/prisma'
 import { getUserIdFromToken } from "@/lib/auth";
 import Groq from 'groq-sdk';
+import { franc } from 'franc'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -31,6 +32,7 @@ export async function POST(
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
+    // fetch document BEFORE building prompts (avoid usage before declaration)
     const document = await prisma.userDocuments.findFirst({
       where: { id, userId }
     });
@@ -38,6 +40,31 @@ export async function POST(
     if (!document) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
+
+    // detect language from the user's prompt (franc returns iso639-3 codes)
+    const code = franc(prompt);
+    let detectedLang = 'en';
+    if (code === 'fra' || code === 'frc' || code === 'fre') detectedLang = 'fr';
+    else if (code === 'eng') detectedLang = 'en';
+    // fallback stays 'en' if undetermined
+
+    const systemPrompt =
+      detectedLang === 'en'
+        ? "You are an expert writing assistant. Generate detailed, relevant, and well-structured content according to the user's request."
+        : "Tu es un assistant d'écriture expert. Génère du contenu détaillé, pertinent et bien structuré selon la demande de l'utilisateur.";
+
+    const userPrompt =
+      detectedLang === 'en'
+        ? `TITLE: ${document.title || document.objective || 'Untitled'}
+CURRENT CONTENT: ${document.rawContent || 'No content'}
+REQUEST: ${prompt}
+
+Generate informative content adapted to the subject. Be precise and technical if necessary.`
+        : `TITRE: ${document.title || document.objective || 'Sans titre'}
+CONTENU ACTUEL: ${document.rawContent || 'Aucun contenu'}
+DEMANDE: ${prompt}
+
+Génère du contenu informatif et adapté au sujet. Sois précis et technique si nécessaire.`;
 
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     // replace both count queries with a single one
@@ -80,15 +107,12 @@ export async function POST(
         messages: [
           {
             role: "system",
-            content: "Tu es un assistant d'écriture expert. Génère du contenu détaillé, pertinent et bien structuré selon la demande de l'utilisateur."
+
+            content: systemPrompt
           },
           {
             role: "user",
-            content: `TITRE: ${document.title || document.objective || 'Sans titre'}
-                      CONTENU ACTUEL: ${document.rawContent || 'Aucun contenu'}
-                      DEMANDE: ${prompt}
-
-                      Génère du contenu informatif et adapté au sujet. Sois précis et technique si nécessaire.`
+            content: userPrompt
           }
         ],
         model: "llama-3.1-8b-instant",
