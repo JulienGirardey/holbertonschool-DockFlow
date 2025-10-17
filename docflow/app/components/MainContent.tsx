@@ -1,6 +1,8 @@
+'use client'
 import CreateDocumentForm from './CreateDocumentForm'
 import EditDocumentForm from './EditDocumentForm'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 
 interface Document {
@@ -118,6 +120,7 @@ export default function MainContent(props: MainContentProps) {
   const [saveError, setSaveError] = useState('')
   const [showAi, setShowAi] = useState(false)
   const { i18n, t } = useTranslation()
+  const routerNav = useRouter()
 
   const handleSave = async (title: string, content: string) => {
     setSaveLoading(true)
@@ -241,7 +244,7 @@ export default function MainContent(props: MainContentProps) {
               <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
                 <p style={{ color: '#ef4444' }}>❌ {profileError}</p>
                 <button
-                  onClick={onStartEditSettings}
+                  onClick={() => routerNav.refresh()}
                   className="auth-button-primary"
                   style={{ marginTop: 'var(--space-md)' }}
                 >
@@ -341,7 +344,7 @@ export default function MainContent(props: MainContentProps) {
             <div style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
               <p style={{ color: '#ef4444' }}>❌ {documentsError}</p>
               <button
-                onClick={() => props.onSectionChange('documents')}
+                onClick={() => routerNav.refresh()}
                 className="auth-button-primary"
                 style={{ marginTop: 'var(--space-md)' }}
               >
