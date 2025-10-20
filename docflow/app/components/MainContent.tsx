@@ -126,17 +126,16 @@ export default function MainContent(props: MainContentProps) {
     setSaveLoading(true)
     setSaveError('')
     try {
-      const token = localStorage.getItem('token')
-      if (!token || !selectedDocument) {
+      if (!selectedDocument) {
         router.push('/login')
         return
       }
 
       const response = await fetch(`/api/documents/${selectedDocument.id}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           title,
@@ -146,26 +145,25 @@ export default function MainContent(props: MainContentProps) {
 
       if (!response.ok) {
         if (response.status === 401) {
-          localStorage.removeItem('token')
           router.push('/login')
-          return
-        }
-        throw new Error('Erreur de sauvegarde')
-      }
+           return
+         }
+         throw new Error('Erreur de sauvegarde')
+       }
 
-      const updatedDoc = await response.json()
-      setSelectedDocument(updatedDoc)
-      setDocumentContent(content)
-      setShowAi(false)
+       const updatedDoc = await response.json()
+       setSelectedDocument(updatedDoc)
+       setDocumentContent(content)
+       setShowAi(false)
 
-      await fetchDocumentsForSidebar()
-      await fetchDocuments()
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Erreur lors de la sauvegarde')
-    } finally {
-      setSaveLoading(false)
-    }
-  }
+       await fetchDocumentsForSidebar()
+       await fetchDocuments()
+     } catch (error) {
+       setSaveError(error instanceof Error ? error.message : 'Erreur lors de la sauvegarde')
+     } finally {
+       setSaveLoading(false)
+     }
+   }
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
@@ -187,7 +185,7 @@ export default function MainContent(props: MainContentProps) {
             <>
               <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
                 <h2 className="section-title" style={{ margin: 0 }}>
-                  {t('Titre du profil')}
+                  {selectedDocument.title}
                 </h2>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
                   <button

@@ -22,7 +22,6 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
       setCreateLoading(true)
       setCreateError('')
 
-      const token = localStorage.getItem('token')
       const requestData = {
         title: newDocTitle.trim(),
         objective: newDocTitle.trim(),
@@ -31,8 +30,8 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
 
       const response = await fetch('/api/documents', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestData)
@@ -41,7 +40,6 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
       if (!response.ok) {
         const errorData = await response.json()
         if (response.status === 401) {
-          localStorage.removeItem('token')
           router.push('/login')
           return
         }

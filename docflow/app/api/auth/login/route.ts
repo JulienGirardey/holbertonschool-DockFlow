@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from '../../../generated/prisma'
 import { generateToken } from '../../../../lib/auth';
+import { serialize } from 'cookie'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -53,16 +54,30 @@ export async function POST(req: NextRequest) {
       email: user.email
     });
 
+	const cookie = serialize('token', token, {
+		httpOnly: true,
+		secure: process.env.NODE_ENV === 'production',
+		sameSite: 'lax',
+		path: '/',
+		maxAge: 7 * 24 * 60 * 60,
+	})
+
     return NextResponse.json({
+			ok: true,
       message: "Login successful",
-      token,
       user: {
         id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email
-      }
-    });
+      },
+    },
+		{
+			headers: {
+				'Set-Cookie': cookie,
+			},
+		}
+	);
     
   } catch (error) {
     console.error('Login error:', error);

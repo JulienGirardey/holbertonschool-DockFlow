@@ -39,24 +39,27 @@ export default function LoginPage() {
     setError('')
 
     try {
-      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(data)
       })
 
-      const result = await response.json()
+      console.log('login status', response.status, 'ok?', response.ok)
+      const text = await response.text()
+      console.log('login raw response', text)
+      // try parse JSON if possible
+      let result = {}
+      try { result = JSON.parse(text) } catch (e) { /* not JSON */ }
 
       if (!response.ok) {
-        throw new Error(result.error || 'Login failed')
+        throw new Error((result as any).error || 'Login failed')
       }
 
-      localStorage.setItem('token', result.token)
-
-      router.push('/dashboard')
+      // debug: vérifier que le cookie a bien été posé (server doit renvoyer Set-Cookie)
+      // ensuite naviguer
+      router.replace('/dashboard')
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occured')
