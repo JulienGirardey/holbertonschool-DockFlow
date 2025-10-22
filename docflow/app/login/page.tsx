@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { LogIn } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
+import React from 'react'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email format'),
@@ -141,6 +142,7 @@ export default function LoginPage() {
                 className="login-input"
                 type="email"
                 placeholder="📧 Votre addresse email"
+                autoComplete="username"
               />
               {errors.email && (
                 <p className="field-error">⚠️ {errors.email.message}</p>
@@ -154,6 +156,7 @@ export default function LoginPage() {
                 className="login-input" 
                 type="password"
                 placeholder="🔒 Votre mot de passe"
+                autoComplete="current-password"
               />
               {errors.password && (
                 <p className="field-error">⚠️ {errors.password.message}</p>
@@ -161,9 +164,16 @@ export default function LoginPage() {
             </div>
 
             {/* Lien "Forgot password ?" */}
-            <div className="forgot-link">
-              <a href="#">Mot de passe oublié ?</a>
-            </div>
+            {/* <div className="forgot-link">
+              <button
+                type="button"
+                onClick={() => router.push('/forgot-password')}
+                className="link-button"
+                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary-600)', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Mot de passe oublié ?
+              </button>
+            </div> */}
 
             {/* Bouton Submit */}
             <button 
