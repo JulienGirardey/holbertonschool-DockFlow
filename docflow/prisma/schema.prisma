@@ -52,7 +52,6 @@ model Settings {
   id          String  @id @default(cuid())
   userId      String  @unique
   language    String  @default("en")
-  colorMode   String  @default("light")
 
   // Relations
   user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
