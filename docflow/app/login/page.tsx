@@ -21,8 +21,6 @@ export default function LoginPage() {
   const [error, setError]= useState('')
   const router = useRouter()
   
-  // Note: react-hook-form gère automatiquement les références
-  
   const {
     register,
     handleSubmit,
@@ -58,8 +56,6 @@ export default function LoginPage() {
         throw new Error((result as any).error || 'Login failed')
       }
 
-      // debug: vérifier que le cookie a bien été posé (server doit renvoyer Set-Cookie)
-      // ensuite naviguer
       router.replace('/dashboard')
 
     } catch (err) {
@@ -72,7 +68,7 @@ export default function LoginPage() {
   return (
     <div className="animate-fadeInUp">
       <div className="login-container">
-        {/* ✅ Theme Toggle - Position fixe en haut à droite */}
+        {/* Theme Toggle */}
         <div style={{
           position: 'fixed',
           top: '20px',
@@ -82,7 +78,7 @@ export default function LoginPage() {
           <ThemeToggle />
         </div>
 
-        {/* ✅ Bouton retour */}
+        {/* back button */}
         <button
           onClick={() => router.push('/')}
           style={{
@@ -115,10 +111,9 @@ export default function LoginPage() {
           </div>
 
           {/* Icon */}
-          {/* ✅ Version avec contrôle manuel complet */}
-          <div className="login-icon-container">  {/* ou .small, .large, .xl */}
+          <div className="login-icon-container">
             <div className="login-icon-bg">
-              <LogIn className='login-icon' />  {/* ✅ CHANGÉ: Supprime les classes h-6 w-6 */}
+              <LogIn className='login-icon' />
             </div>
           </div>
 
@@ -126,16 +121,15 @@ export default function LoginPage() {
             Enregistrez-vous avec votre email
           </h3>
 
-          {/* Message d'erreur */}
+          {/* Error message */}
           {error && (
             <div className="login-error">
               <strong>Oops!</strong> {error}
             </div>
           )}
 
-          {/* FORMULAIRE */}
+          {/* FORM */}
           <form onSubmit={handleSubmit(onSubmit)} className="login-form">
-            {/* Champ Email */}
             <div>
               <input
                 {...register('email')}
@@ -148,8 +142,6 @@ export default function LoginPage() {
                 <p className="field-error">⚠️ {errors.email.message}</p>
               )}
             </div>
-
-            {/* Champ Password */}
             <div>
               <input
                 {...register('password')}
@@ -162,20 +154,7 @@ export default function LoginPage() {
                 <p className="field-error">⚠️ {errors.password.message}</p>
               )}
             </div>
-
-            {/* Lien "Forgot password ?" */}
-            {/* <div className="forgot-link">
-              <button
-                type="button"
-                onClick={() => router.push('/forgot-password')}
-                className="link-button"
-                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary-600)', cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                Mot de passe oublié ?
-              </button>
-            </div> */}
-
-            {/* Bouton Submit */}
+            {/* Submit button */}
             <button 
               type="submit"
               className="login-button"
@@ -185,7 +164,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Lien vers register */}
+          {/* register link */}
           <div style={{ 
             textAlign: 'center', 
             marginTop: 'var(--space-lg)',

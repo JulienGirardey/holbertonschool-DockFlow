@@ -19,7 +19,7 @@ export default function ThemeToggle() {
   useEffect(() => {
     setIsClient(true);
     
-    // Récupérer le thème sauvegardé ou détecter la préférence système
+    // recovery the save theme
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     
@@ -53,7 +53,7 @@ export default function ThemeToggle() {
   };
 
   if (!isClient) {
-    return null; // Évite les erreurs d'hydratation
+    return null;
   }
 
   return (

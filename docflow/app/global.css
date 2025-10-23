@@ -1,50 +1,53 @@
+/* Base Tailwind imports */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ✅ DESIGN TOKENS - Variables CSS personnalisées LIGHT (par défaut) */
+/* DESIGN TOKENS - Custom CSS variables for LIGHT (default)
+   I document the purpose of each group: colors, spacing, typography, shadows, transitions.
+*/
 :root {
-  /* Summer Colors - Couleurs vives et chaleureuses */
-  --primary-50: #fff8f1;    /* Crème très clair */
-  --primary-100: #feecdc;   /* Pêche très clair */
-  --primary-200: #fdd8b5;   /* Pêche clair */
-  --primary-300: #fdba74;   /* Orange doux */
-  --primary-500: #fb923c;   /* Orange summer */
-  --primary-600: #f97316;   /* Orange vif */
-  --primary-700: #ea580c;   /* Orange foncé */
+  /* Summer Colors - lively and warm color */
+  --primary-50: #fff8f1;    /* very light cream */
+  --primary-100: #feecdc;   /* very light peach */
+  --primary-200: #fdd8b5;   /* light peach */
+  --primary-300: #fdba74;   /* soft orange */
+  --primary-500: #fb923c;   /* summer orange */
+  --primary-600: #f97316;   /* lively orange */
+  --primary-700: #ea580c;   /* dark orange */
   
-  --success-50: #f0fdf4;    /* Vert menthe très clair */
-  --success-100: #dcfce7;   /* Vert menthe clair */
+  --success-50: #f0fdf4;    /* very light green mint */
+  --success-100: #dcfce7;   /* light green mint */
   --success-200: #bbf7d0;
   --success-300: #86efac;
-  --success-500: #22c55e;   /* Vert prairie */
-  --success-600: #16a34a;   /* Vert forêt */
+  --success-500: #22c55e;   /* green meadow */
+  --success-600: #16a34a;   /* green forest */
   
   --error-50: #fef2f2;
   --error-500: #ef4444;
   --error-600: #dc2626;
   
-  /* Summer Backgrounds - Plus lumineux */
-  --gray-50: #fffbf5;       /* Blanc cassé chaud */
-  --gray-100: #fef7ed;      /* Crème très clair */
-  --gray-200: #fed7aa;      /* Beige doré */
-  --gray-300: #fdba74;      /* Sable doré */
-  --gray-400: #fb923c;      /* Orange clair */
-  --gray-500: #f97316;      /* Orange moyen */
-  --gray-600: #ea580c;      /* Orange foncé */
-  --gray-700: #c2410c;      /* Marron chaud */
-  --gray-800: #9a3412;      /* Marron foncé */
-  --gray-900: #7c2d12;      /* Marron très foncé */
+  /* Summer Backgrounds - brighter background palette used site-wide */
+  --gray-50: #fffbf5;       /* warm off-white */
+  --gray-100: #fef7ed;      /* very light cream */
+  --gray-200: #fed7aa;      /* golden beige */
+  --gray-300: #fdba74;      /* golden sand */
+  --gray-400: #fb923c;      /* light orange */
+  --gray-500: #f97316;      /* medium orange */
+  --gray-600: #ea580c;      /* dark orange */
+  --gray-700: #c2410c;      /* hot brown */
+  --gray-800: #9a3412;      /* dark brown */
+  --gray-900: #7c2d12;      /* very dark brown */
   
-  /* Summer accent colors */
-  --summer-sky: #0ea5e9;    /* Bleu ciel */
-  --summer-sun: #fbbf24;    /* Jaune soleil */
-  --summer-coral: #fb7185;  /* Corail */
-  --summer-mint: #34d399;   /* Menthe */
-  --summer-sand: #fef3c7;   /* Sable */
-  --summer-peach: #fed7aa;  /* Pêche */
+  /* Summer accent colors - semantic accents used for highlights */
+  --summer-sky: #0ea5e9;    /* blue sky */
+  --summer-sun: #fbbf24;    /* yellow sun */
+  --summer-coral: #fb7185;  /* coral */
+  --summer-mint: #34d399;   /* mint */
+  --summer-sand: #fef3c7;   /* sand */
+  --summer-peach: #fed7aa;  /* peach */
   
-  /* Spacing, Typography, etc. */
+  /* Spacing, Typography, Radii - central tokens for consistent layout */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
@@ -67,7 +70,7 @@
   --radius-xl: 1rem;
   --radius-2xl: 2rem;
   
-  /* Summer shadows - dorées */
+  /* Shadows and transitions - tuned for the summer palette */
   --shadow-sm: 0 1px 3px 0 rgba(251, 146, 60, 0.15);
   --shadow-md: 0 4px 8px -2px rgba(251, 146, 60, 0.2);
   --shadow-lg: 0 12px 20px -4px rgba(251, 146, 60, 0.25);
@@ -78,14 +81,16 @@
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ✅ DARK MODE MANUEL - Seulement avec classe .dark */
+/* DARK MODE MANUAL - apply these variables when .dark is present on a parent
+   Keep the same variable names so components switch automatically.
+*/
 .dark {
-  /* Tech Blues - Couleurs techniques et professionnelles */
+  /* Cooler "tech blue" palette for dark context */
   --primary-50: #eff6ff;
   --primary-100: #dbeafe;
   --primary-200: #bfdbfe;
   --primary-300: #93c5fd;
-  --primary-500: #3b82f6;   /* Bleu tech principal */
+  --primary-500: #3b82f6;
   --primary-600: #2563eb;
   --primary-700: #1d4ed8;
   
@@ -100,41 +105,34 @@
   --error-500: #ef4444;
   --error-600: #dc2626;
   
-  /* Cool Gray Palette */
-  --gray-50: #1e293b;       /* Bleu nuit très foncé */
-  --gray-100: #1e293b;      /* Bleu nuit foncé */
-  --gray-200: #334155;      /* Gris bleu moyen */
-  --gray-300: #475569;      /* Gris bleu */
-  --gray-400: #64748b;      /* Gris neutre */
-  --gray-500: #64748b;      /* Gris neutre */
-  --gray-600: #94a3b8;      /* Gris clair */
-  --gray-700: #cbd5e1;      /* Gris très clair */
-  --gray-800: #e2e8f0;      /* Presque blanc */
-  --gray-900: #f1f5f9;      /* Blanc cassé */
+  /* Cool gray palette for backgrounds in dark mode */
+  --gray-50: #1e293b;       /* very dark blue night */
+  --gray-100: #1e293b;      /* dark blue night */
+  --gray-200: #334155;      /* medium blue grey */
+  --gray-300: #475569;      /* blue grey */
+  --gray-400: #64748b;      /* neutral grey */
+  --gray-500: #64748b;      /* neutral grey */
+  --gray-600: #94a3b8;      /* light grey */
+  --gray-700: #cbd5e1;      /* very light grey */
+  --gray-800: #e2e8f0;      /* almost white */
+  --gray-900: #f1f5f9;      /* broken white */
   
-  /* Tech accent colors */
+  /* Accent variables remain mapped so components keep contrast */
   --summer-sky: #0ea5e9;
   --summer-sun: #fbbf24;
   --summer-coral: #fb7185;
   --summer-mint: #34d399;
-  --summer-sand: #334155;   /* Override pour dark */
-  --summer-peach: #1e293b;  /* Override pour dark */
+  --summer-sand: #334155;
+  --summer-peach: #1e293b;
   
-  /* Shadows plus froides et subtiles */
+  /* Subtler shadows for dark mode */
   --shadow-sm: 0 1px 2px 0 rgba(59, 130, 246, 0.1);
   --shadow-md: 0 4px 6px -1px rgba(59, 130, 246, 0.15);
   --shadow-lg: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
   --shadow-xl: 0 20px 25px -5px rgba(59, 130, 246, 0.25);
 }
 
-/* ✅ SUPPRIMEZ COMPLÈTEMENT cette section (qui causait le problème) : */
-/* 
-@media (prefers-color-scheme: dark) {
-  // SUPPRIMÉ - On utilise maintenant .dark class seulement
-}
-*/
-
-/* ✅ RESET ET BASE STYLES */
+/* Global reset and base layout */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -142,7 +140,7 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: smooth; /* smooth scrolling for anchor navigation */
 }
 
 body {
@@ -154,9 +152,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ✅ COMPOSANTS RÉUTILISABLES */
+/* REUSABLE COMPONENTS
+   Brief comments explain purpose and expected usage of each class.
+*/
 
-/* Buttons */
+/* Buttons - base button styles and variants */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -180,6 +180,7 @@ body {
   pointer-events: none;
 }
 
+/* Primary button - warm gradient and shadow */
 .btn-primary {
   background: linear-gradient(135deg, var(--primary-500), var(--summer-coral));
   color: white;
@@ -192,6 +193,7 @@ body {
   background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
 }
 
+/* Secondary - neutral outlined button */
 .btn-secondary {
   background: white;
   color: var(--gray-700);
@@ -204,6 +206,7 @@ body {
   color: var(--primary-700);
 }
 
+/* Success button - used for confirmations */
 .btn-success {
   background: linear-gradient(135deg, var(--success-500), var(--summer-mint));
   color: white;
@@ -215,6 +218,7 @@ body {
   box-shadow: var(--shadow-md);
 }
 
+/* Size modifiers for buttons */
 .btn-lg {
   padding: var(--space-md) var(--space-xl);
   font-size: var(--text-base);
@@ -227,7 +231,7 @@ body {
   border-radius: var(--radius-xl);
 }
 
-/* Cards */
+/* Cards - consistent card styling used across app */
 .card {
   background: linear-gradient(135deg, white, var(--gray-50));
   border-radius: var(--radius-xl);
@@ -245,7 +249,7 @@ body {
   padding: var(--space-xl);
 }
 
-/* Inputs */
+/* Inputs - base styles and focus behavior */
 .input {
   width: 100%;
   padding: var(--space-md);
@@ -266,8 +270,7 @@ body {
   border-color: var(--gray-300);
 }
 
-/* ✅ ANIMATIONS */
-
+/* ANIMATIONS - small set of reusable keyframes and utility classes */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -352,7 +355,7 @@ body {
   100% { opacity: 0.8; transform: scale(1.2); }
 }
 
-/* Loading animations */
+/* Loading animations used for skeletons and loaders */
 @keyframes loading-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -382,7 +385,7 @@ body {
   animation: loading-bar 1.5s ease-in-out infinite;
 }
 
-/* ✅ LAYOUTS & CONTAINERS */
+/* LAYOUTS & CONTAINERS - wrapper utilities for page layout */
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -413,7 +416,7 @@ body {
   gap: var(--space-xl);
 }
 
-/* ✅ UTILITAIRES */
+/* UTILITY CLASSES - small helpers to avoid repetition */
 .text-gradient {
   background: linear-gradient(135deg, var(--primary-600), var(--summer-coral), var(--summer-sky));
   -webkit-background-clip: text;
@@ -433,7 +436,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* ✅ RESPONSIVE UTILITIES */
+/* Responsive small-screen helpers */
 @media (max-width: 768px) {
   .mobile-hidden {
     display: none;
@@ -448,9 +451,11 @@ body {
   }
 }
 
-/* ✅ STYLES SPÉCIFIQUES AUX PAGES */
+/* PAGE SPECIFIC STYLES
+   Header, navigation, main containers and page-specific components are grouped below.
+*/
 
-/* Header & Navigation */
+/* Header & Navigation - header container and logo styles */
 .header-container {
   background: linear-gradient(135deg, var(--summer-peach), var(--summer-sand));
   color: var(--gray-800);
@@ -476,6 +481,7 @@ body {
   box-shadow: var(--shadow-md);
 }
 
+/* Navigation buttons and active states */
 .nav-button {
   background: linear-gradient(135deg, var(--summer-sand), var(--primary-100));
   color: var(--gray-700);
@@ -503,6 +509,7 @@ body {
   box-shadow: var(--shadow-md);
 }
 
+/* Auth buttons variations */
 .auth-button-outline {
   background: linear-gradient(135deg, var(--gray-50), var(--summer-sand));
   color: var(--gray-700);
@@ -511,27 +518,28 @@ body {
   border-radius: var(--radius-xl);
   border: 2px solid;
   font-weight: 600;
-	width: 8em;
+  width: 8em;
   cursor: pointer;
   font-size: var(--text-base);
   transition: var(--transition-fast);
   box-shadow: var(--shadow-sm);
-	white-space: nowrap;
+  white-space: nowrap;
 }
 
+/* Small variant for cancel/delete user actions */
 .annul-dlt-user {
-	background: linear-gradient(135deg, var(--gray-50), var(--summer-sand));
+  background: linear-gradient(135deg, var(--gray-50), var(--summer-sand));
   color: var(--gray-700);
   padding: 7px;
   border-radius: var(--radius-xl);
   border: 2px solid var(--primary-300);
   font-weight: 600;
-	width: 6em;
+  width: 6em;
   cursor: pointer;
   font-size: var(--text-base);
   transition: var(--transition-fast);
   box-shadow: var(--shadow-sm);
-	white-space: nowrap;
+  white-space: nowrap;
 }
 
 .annul-dlt-user:hover {
@@ -540,8 +548,6 @@ body {
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
-
-
 
 .auth-button-outline:hover {
   background: linear-gradient(135deg, var(--primary-100), var(--primary-200));
@@ -570,7 +576,7 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
-/* Main container */
+/* Main container - page main section with padding and background */
 .main-container {
   margin: var(--space-xl);
   background: linear-gradient(135deg, var(--gray-50), var(--summer-sand));
@@ -599,6 +605,7 @@ body {
   margin-bottom: var(--space-2xl);
 }
 
+/* CTA styles - highlighted action buttons */
 .cta-button {
   background: linear-gradient(135deg, var(--success-500), var(--summer-mint));
   color: white;
@@ -618,7 +625,7 @@ body {
   box-shadow: var(--shadow-xl);
 }
 
-/* Steps */
+/* Step components - visual stepper used in onboarding or guides */
 .step-container {
   display: flex;
   align-items: center;
@@ -679,7 +686,7 @@ body {
   line-height: 1.6;
 }
 
-/* Summer cards */
+/* Summer cards - decorative themed cards with hover state */
 .summer-card-1 {
   background: linear-gradient(135deg, var(--primary-50), var(--summer-peach));
   border: 3px solid var(--primary-300);
@@ -728,14 +735,14 @@ body {
   background: linear-gradient(135deg, #fef3c7, #fde68a);
 }
 
-/* Page container */
+/* Page container - overall page background and font-family fallback */
 .page-container {
   min-height: 100vh;
   background: linear-gradient(135deg, var(--gray-50), var(--summer-sand), var(--gray-100));
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* Footer */
+/* Footer - simple centered footer styling */
 .footer {
   text-align: center;
   padding: var(--space-xl);
@@ -747,7 +754,7 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-/* Illustration */
+/* Illustration container - decorative area with wavy lines */
 .illustration-container {
   background: var(--gray-100);
   border-radius: var(--radius-xl);
@@ -768,6 +775,7 @@ body {
   transition: var(--transition-normal);
 }
 
+/* Adjust widths to create wavy visual rhythm */
 .wavy-line:nth-child(1) { width: 92%; margin-left: 2%; }
 .wavy-line:nth-child(2) { width: 87%; margin-left: 1%; }
 .wavy-line:nth-child(3) { width: 94%; margin-left: 3%; }
@@ -775,7 +783,9 @@ body {
 .wavy-line:nth-child(5) { width: 91%; margin-left: 4%; }
 .wavy-line:nth-child(6) { width: 88%; margin-left: 2%; }
 
-/* ✅ DARK MODE OVERRIDES */
+/* DARK MODE OVERRIDES
+   Target UI components that need explicit overrides beyond variable swapping.
+*/
 .dark .header-container,
 .dark .main-container,
 .dark .page-container,
@@ -830,7 +840,7 @@ body {
   background-clip: text;
 }
 
-/* Animation du toggle */
+/* Theme toggle animation */
 .theme-toggle {
   transform-origin: center;
 }
@@ -839,24 +849,24 @@ body {
   transform: scale(0.95) !important;
 }
 
-/* Animations fluides pour le changement de thème - EXCLUANT les inputs pour éviter les problèmes de focus */
+/* Smooth theme-change transitions - EXCLUDE inputs to avoid focus issues */
 *:not(input):not(textarea):not(select) {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
-/* ✅ CORRECTION FOCUS - Désactiver toutes les transitions sur les inputs pour éviter la perte de focus */
+/* FIX FOCUS - Disable transitions on inputs to avoid losing focus */
 input, textarea, select {
   transition: none !important;
 }
 
-/* ✅ CORRECTION SPÉCIFIQUE - S'assurer que nos inputs d'édition n'ont AUCUNE animation */
+/* FIX SPECIFIC - Ensure editing inputs have NO animations */
 .modal-title-input, .content-textarea {
   transition: none !important;
   transform: none !important;
   animation: none !important;
 }
 
-/* Classes utilitaires */
+/* Small utility classes and text helpers */
 .text-center {
   text-align: center;
 }
@@ -966,8 +976,7 @@ input, textarea, select {
   margin-bottom: 1rem;
 }
 
-/* ✅ AJOUT - Styles pour la page LOGIN */
-
+/* LOGIN PAGE STYLES - scoped to the login view */
 .login-container {
   min-height: 100vh;
   background: linear-gradient(135deg, var(--gray-50), var(--summer-sand), var(--gray-100));
@@ -1010,15 +1019,16 @@ input, textarea, select {
   margin-bottom: var(--space-2xl);
 }
 
+/* Icon container variables for flexible icon sizing */
 .login-icon-container {
   display: flex;
   justify-content: center;
   margin-bottom: var(--space-lg);
   
-  /* ✅ Variables personnalisables */
-  --icon-size: 80px;          /* Taille du rond */
-  --icon-inner-size: 32px;    /* Taille de l'icône */
-  --icon-border-width: 3px;   /* Épaisseur de la bordure */
+  /* local custom properties for icon sizing and border */
+  --icon-size: 80px;          /* outer circle size */
+  --icon-inner-size: 32px;    /* icon svg size */
+  --icon-border-width: 3px;   /* border thickness */
 }
 
 .login-icon-bg {
@@ -1027,7 +1037,7 @@ input, textarea, select {
   border-radius: 50%;
   transition: var(--transition-fast);
   
-  /* Dimensions et centrage parfait */
+  /* fixed dimensions and perfect centering */
   width: var(--icon-size);
   height: var(--icon-size);
   min-width: var(--icon-size);
@@ -1036,11 +1046,8 @@ input, textarea, select {
   align-items: center;
   justify-content: center;
   
-  /* Force le cercle parfait */
   aspect-ratio: 1/1;
   flex-shrink: 0;
-  
-  /* Centrage parfait du contenu */
   position: relative;
 }
 
@@ -1051,13 +1058,12 @@ input, textarea, select {
   border-color: var(--primary-400);
 }
 
+/* Ensure svg is centered inside the circular bg */
 .login-icon-bg svg {
   width: var(--icon-inner-size) !important;
   height: var(--icon-inner-size) !important;
   color: var(--primary-600);
   transition: var(--transition-fast);
-  
-  /* Centrage absolu au pixel près */
   position: absolute;
   top: 50%;
   left: 50%;
@@ -1069,7 +1075,7 @@ input, textarea, select {
   transform: translate(-50%, -50%) scale(1.15);
 }
 
-/* ✅ VARIANTES DE TAILLE - Ajoutez ces classes pour personnaliser */
+/* Size variants for icon container */
 .login-icon-container.small {
   --icon-size: 64px;
   --icon-inner-size: 24px;
@@ -1088,6 +1094,7 @@ input, textarea, select {
   --icon-border-width: 5px;
 }
 
+/* Form and field styles for login */
 .login-form-title {
   text-align: center;
   font-size: var(--text-lg);
@@ -1122,6 +1129,7 @@ input, textarea, select {
   color: var(--gray-500);
 }
 
+/* Error and helper text styles */
 .login-error {
   margin-bottom: var(--space-md);
   padding: var(--space-md);
@@ -1156,6 +1164,7 @@ input, textarea, select {
   text-decoration: underline;
 }
 
+/* Login submit button */
 .login-button {
   width: 100%;
   background: linear-gradient(135deg, var(--primary-500), var(--summer-coral));
@@ -1189,7 +1198,7 @@ input, textarea, select {
   gap: var(--space-md);
 }
 
-/* Styles pour les espaces entre les champs */
+/* Spacing helpers for vertical stacks */
 .space-y-4 > * + * {
   margin-top: var(--space-md);
 }
@@ -1198,7 +1207,7 @@ input, textarea, select {
   margin-top: var(--space-2xl);
 }
 
-/* ✅ DARK MODE pour LOGIN */
+/* DARK MODE adjustments for login view */
 .dark .login-container {
   background: var(--gray-50) !important;
 }
@@ -1254,7 +1263,7 @@ input, textarea, select {
   color: var(--primary-400) !important;
 }
 
-/* ✅ AJOUT - Style pour le bouton back */
+/* Back button hover interaction */
 .back-button:hover {
   background: var(--gray-100) !important;
   border-color: var(--primary-300) !important;
@@ -1273,8 +1282,7 @@ input, textarea, select {
   color: var(--primary-400) !important;
 }
 
-/* ✅ AJOUT - Styles pour la page DASHBOARD */
-
+/* DASHBOARD STYLES - sidebar, main content and responsive layout */
 .dashboard-container {
   min-height: 100vh;
   background: linear-gradient(135deg, var(--gray-50), var(--summer-sand), var(--gray-100));
@@ -1286,23 +1294,23 @@ input, textarea, select {
   width: 280px;
   background: linear-gradient(135deg, var(--summer-peach), var(--gray-100));
   border: 2px solid var(--primary-200);
-  border-radius: var(--radius-2xl); /* ✅ CHANGÉ: Tous les coins arrondis maintenant */
+  border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 2rem); /* ✅ AJUSTÉ: Pour laisser de l'espace en haut et bas */
+  height: calc(100vh - 2rem); /* leave top/bottom space */
   position: sticky;
-  top: var(--space-md); /* ✅ AJUSTÉ: Marge du haut */
+  top: var(--space-md);
   margin: var(--space-md);
   margin-right: 0;
-  overflow: hidden; /* ✅ NOUVEAU: Pour que le contenu respecte les bords arrondis */
+  overflow: hidden; /* keep content clipped to rounded corners */
 }
 
 .sidebar-header {
   padding: 20px;
   border-bottom: 2px solid var(--primary-200);
   background: linear-gradient(135deg, var(--primary-100), var(--summer-sand));
-  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0; /* ✅ NOUVEAU: Arrondi seulement en haut */
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0; /* rounded top corners only */
 }
 
 .sidebar-nav-button {
@@ -1333,22 +1341,6 @@ input, textarea, select {
   transform: translateX(2px);
   border-color: var(--primary-400);
   box-shadow: var(--shadow-md);
-}
-
-.sidebar-documents {
-  flex: 1;
-  padding: var(--space-lg);
-  overflow: auto;
-  min-height: 0;
-}
-
-.documents-title {
-  color: var(--gray-700);
-  font-size: var(--text-sm);
-  font-weight: bold;
-  margin-bottom: var(--space-md);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .document-title-sidebar {
@@ -1449,9 +1441,9 @@ input, textarea, select {
 .doc-delete-btn {
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
-  padding: 20px; /* ✅ RÉDUIT: padding carré minimal */
-  min-width: 28px; /* ✅ RÉDUIT: taille très compacte */
-  height: 28px; /* ✅ RÉDUIT: hauteur fixe */
+  padding: 20px; /* REDUCED: compact square padding */
+  min-width: 28px; /* REDUCED: very compact size */
+  height: 28px; /* REDUCED: fixed height */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1468,8 +1460,8 @@ input, textarea, select {
   padding: var(--space-lg);
   border-top: 2px solid var(--primary-200);
   background: linear-gradient(135deg, var(--primary-100), var(--summer-sand));
-  border-radius: 0 0 var(--radius-2xl) var(--radius-2xl); /* ✅ NOUVEAU: Arrondi seulement en bas */
-  margin-top: auto; /* ✅ NOUVEAU: Pousse le footer vers le bas */
+  border-radius: 0 0 var(--radius-2xl) var(--radius-2xl); /* NEW: rounded only on bottom */
+  margin-top: auto; /* NEW: push footer to bottom */
 }
 
 .user-info-card {
@@ -1515,17 +1507,17 @@ input, textarea, select {
 }
 
 .edit-button {
-	display: flex;
-	align-items: flex-end;
-	justify-content: space-around;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
 }
 
 .delete-user {
-	padding: 18px;
-	width: 100%;
-	border-radius: 20px;
-	font-size: 16px;
-	font-weight: bold;
+    padding: 18px;
+    width: 100%;
+    border-radius: 20px;
+    font-size: 16px;
+    font-weight: bold;
 }
 
 .dashboard-main {
@@ -1535,10 +1527,10 @@ input, textarea, select {
 }
 
 .confirm-dlt-user {
-	border-radius: 15px;
-	padding: 30px 10px 30px 10px;
-	font-size: 16px;
-	font-weight: bold;
+    border-radius: 15px;
+    padding: 30px 10px 30px 10px;
+    font-size: 16px;
+    font-weight: bold;
 }
 
 .section-header {
@@ -1548,8 +1540,8 @@ input, textarea, select {
   margin-bottom: var(--space-xl);
   border: 2px solid var(--primary-200);
   box-shadow: var(--shadow-md);
-	display: flex;
-	justify-content: space-between;
+    display: flex;
+    justify-content: space-between;
 }
 
 .section-title {
@@ -1561,29 +1553,29 @@ input, textarea, select {
 }
 
 .cta-button {
-	width: 10em;
-	padding: 10px;
+    width: 10em;
+    padding: 10px;
 }
 
 .generate-IA {
-	margin: 10px;
-	margin-left: 21em;
+    margin: 10px;
+    margin-left: 21em;
 }
 
 .aiPromptTextarea {
-	height: 8em;
-	border-radius: 10px;
-	padding-left: 10px;
-	padding-top: 5px;
+    height: 8em;
+    border-radius: 10px;
+    padding-left: 10px;
+    padding-top: 5px;
 }
 
 .aiGenerator {
-	display: flex;
-	flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 
 .aiPromptLabel {
-	text-align: center;
+    text-align: center;
 }
 
 .profile-content,
@@ -1760,13 +1752,13 @@ input, textarea, select {
 }
 
 .date-save-status {
-	display: flex;
-	flex-wrap: nowrap;
-	justify-content: space-between;
+    display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
 }
 
 .save-indicator {
-	display: flex;
+    display: flex;
   font-size: var(--text-xs);
   color: var(--gray-600);
   margin-right: var(--space-md);
@@ -1774,7 +1766,7 @@ input, textarea, select {
 }
 
 .main {
-	margin: 10px
+    margin: 10px
 }
 
 .save-indicator.saving {
@@ -1908,7 +1900,7 @@ input, textarea, select {
   justify-content: space-evenly;
 }
 
-/* ✅ DARK MODE pour DASHBOARD */
+/* DARK MODE for dashboard */
 .dark .dashboard-container {
   background: var(--gray-50) !important;
 }
@@ -2001,23 +1993,23 @@ input, textarea, select {
   background: linear-gradient(135deg, #ef4444, #dc2626) !important;
 }
 
-/* Theme Toggle pour dashboard */
+/* Theme Toggle for dashboard */
 .dashboard-theme-toggle {
-	display: flex;
-	flex-wrap: nowrap;
-	justify-content: space-between;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
   position: fixed;
   top: 20px;
-  left: 320px; /* ✅ NOUVEAU: Positionné après la sidebar (280px + 40px de marge) */
+  left: 320px; /* NEW: positioned after sidebar (280px + 40px gap) */
   right: 20px;
   z-index: 100;
-  width: calc(100% - 340px); /* ✅ AJUSTÉ: Largeur adaptée */
+  width: calc(100% - 340px); /* ADJUSTED: width adapted */
 }
 
-/* ✅ RESPONSIVE pour dashboard-theme-toggle */
+/* RESPONSIVE for dashboard-theme-toggle */
 @media (max-width: 1024px) {
   .dashboard-theme-toggle {
-    left: 280px; /* ✅ AJUSTÉ: Pour sidebar réduite */
+    left: 280px; /* ADJUSTED: for reduced sidebar */
     width: calc(100% - 300px);
   }
 }
@@ -2063,15 +2055,15 @@ input, textarea, select {
   }
 }
 
-/* ✅ AJOUT - Ajustement des boutons sidebar seulement */
+/* ADDED - Adjust sidebar action buttons only */
 
-/* Boutons d'actions plus petits dans la sidebar */
+/* Smaller action buttons in the sidebar */
 .sidebar-documents .doc-action-btn {
-  padding: 6px 10px; /* ✅ RÉDUIT: de var(--space-sm) var(--space-md) */
+  padding: 6px 10px; /* REDUCED: from var(--space-sm) var(--space-md) */
   border: none;
-  border-radius: var(--radius-md); /* ✅ RÉDUIT: coins moins arrondis */
+  border-radius: var(--radius-md); /* REDUCED: less rounded corners */
   cursor: pointer;
-  font-size: 11px; /* ✅ RÉDUIT: texte plus petit */
+  font-size: 11px; /* REDUCED: smaller text */
   font-weight: 500;
   transition: var(--transition-fast);
   box-shadow: var(--shadow-sm);
@@ -2080,7 +2072,7 @@ input, textarea, select {
 .sidebar-documents .doc-open-btn {
   background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
   color: white;
-  min-width: 60px; /* ✅ RÉDUIT: largeur minimale */
+  min-width: 60px; /* REDUCED: min width */
 }
 
 .sidebar-documents .doc-open-btn:hover {
@@ -2092,13 +2084,13 @@ input, textarea, select {
 .sidebar-documents .doc-delete-btn {
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
-  padding: 6px; /* ✅ RÉDUIT: padding carré minimal */
-  min-width: 28px; /* ✅ RÉDUIT: taille très compacte */
-  height: 28px; /* ✅ RÉDUIT: hauteur fixe */
+  padding: 6px; /* REDUCED: compact square padding */
+  min-width: 28px; /* REDUCED: very compact size */
+  height: 28px; /* REDUCED: fixed height */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px; /* ✅ RÉDUIT: emoji plus petit */
+  font-size: 12px; /* REDUCED: smaller icon/text */
 }
 
 .sidebar-documents .doc-delete-btn:hover {
@@ -2107,16 +2099,16 @@ input, textarea, select {
   box-shadow: var(--shadow-md);
 }
 
-/* Actions container avec espacement réduit */
+/* Actions container with reduced spacing */
 .sidebar-documents .document-actions {
   display: flex;
-  gap: 6px; /* ✅ RÉDUIT: espacement entre boutons */
-  margin-top: var(--space-sm); /* ✅ GARDE: marge normale */
+  gap: 6px; /* REDUCED: spacing between buttons */
+  margin-top: var(--space-sm); /* KEEP: normal margin */
   justify-content: space-between;
   align-items: center;
 }
 
-/* ✅ DARK MODE pour les boutons sidebar */
+/* DARK MODE for sidebar buttons */
 .dark .sidebar-documents .doc-open-btn {
   background: linear-gradient(135deg, var(--primary-500), var(--primary-600)) !important;
 }
@@ -2133,7 +2125,7 @@ input, textarea, select {
   background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
 }
 
-/* ✅ RESPONSIVE DASHBOARD */
+/* RESPONSIVE DASHBOARD */
 @media (max-width: 1024px) {
   .dashboard-sidebar {
     width: 240px;

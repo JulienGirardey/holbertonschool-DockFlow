@@ -130,9 +130,6 @@ export default function MainContent(props: MainContentProps) {
 		setDeleteAccountError('')
 
 		try {
-			console.log('[delete] calling /api/auth/delete')
-
-			// Si tu stockes un JWT en localStorage, ajoute-le automatiquement
 			const headers: Record<string, string> = {}
 			try {
 				const jwt = typeof window !== 'undefined' ? localStorage.getItem('jwt') : null
@@ -143,7 +140,7 @@ export default function MainContent(props: MainContentProps) {
 
 			const res = await fetch('/api/auth/delete', {
 				method: 'DELETE',
-				credentials: 'include', // envoie les cookies si c'est une session cookie
+				credentials: 'include',
 				headers
 			})
 
@@ -159,7 +156,7 @@ export default function MainContent(props: MainContentProps) {
 				return
 			}
 
-			// redirection après suppression
+			// redirection after deletions
 			routerNav.push('/')
 		} catch (err) {
 			console.error('[delete] fetch error', err)
