@@ -1,5 +1,5 @@
-import { NextRequest } from 'next/server';
-import jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken'
+import type { NextRequest } from 'next/server'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -20,27 +20,44 @@ export function generateToken(payload: { userId: string; email: string }): strin
   return token;
 }
 
-export function getUserIdFromToken(req: NextRequest): string | null {
-  try {
-    // recovery the header
-    const authHeader = req.headers.get('authorization');
+export function verifyToken(token: string) {
+  if (!process.env.JWT_SECRET) throw new Error('Missing JWT_SECRET')
+  return jwt.verify(token, process.env.JWT_SECRET) as Record<string, any>
+}
 
-    // check the format
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null;
+// Remplace / ajoute la fonction getUserIdFromToken pour supporter Authorization + cookie
+export function getUserIdFromToken(req: NextRequest | { headers?: any }) {
+  try {
+    // 1) Header Authorization: "Bearer <token>"
+    const getHeader = (name: string) =>
+      typeof req.headers?.get === 'function'
+        ? req.headers.get(name)
+        : (req.headers && (req.headers as any)[name?.toLowerCase()])
+
+    const authHeader = getHeader('authorization') || getHeader('Authorization')
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7)
+      const payload = verifyToken(token)
+      return (payload as any).userId ?? null
     }
 
-    // delete the Bearer of the token
-    const token = authHeader.substring(7);
+    // 2) Cookie header: look for token=...
+    const cookieHeader = getHeader('cookie') || getHeader('Cookie') || (req as any).cookie
+    if (cookieHeader && typeof cookieHeader === 'string') {
+      const m = cookieHeader.match(/(^|;\s*)token=([^;]+)/)
+      if (m) {
+        try {
+          const token = decodeURIComponent(m[2])
+          const payload = verifyToken(token)
+          return (payload as any).userId ?? null
+        } catch (e) {
+          return null
+        }
+      }
+    }
 
-    // check and decode token
-    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
-
-    // TODO: Retourner le userId
-    return decoded.userId;
-
-  } catch (error) {
-    console.error('Token validation failed:', error);
-    return null;
+    return null
+  } catch (e) {
+    return null
   }
 }

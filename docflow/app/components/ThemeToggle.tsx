@@ -19,7 +19,7 @@ export default function ThemeToggle() {
   useEffect(() => {
     setIsClient(true);
     
-    // Récupérer le thème sauvegardé ou détecter la préférence système
+    // recovery the save theme
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     
@@ -53,7 +53,7 @@ export default function ThemeToggle() {
   };
 
   if (!isClient) {
-    return null; // Évite les erreurs d'hydratation
+    return null;
   }
 
   return (
@@ -70,10 +70,10 @@ export default function ThemeToggle() {
           cursor: 'pointer',
           background: theme === 'dark' 
             ? 'linear-gradient(135deg, #1e293b, #334155)' 
-            : 'linear-gradient(135deg, #fbbf24, #f97316)', // ✅ Orange summer
+            : 'linear-gradient(135deg, #fbbf24, #f97316)',
           boxShadow: theme === 'dark'
             ? '0 4px 14px rgba(59, 130, 246, 0.3)'
-            : '0 4px 14px rgba(249, 115, 22, 0.4)', // ✅ Orange glow
+            : '0 4px 14px rgba(249, 115, 22, 0.4)',
           transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden'
         }}

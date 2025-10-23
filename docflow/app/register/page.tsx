@@ -72,7 +72,7 @@ export default function RegisterPage() {
   return (
     <div className="animate-fadeInUp">
       <div className="login-container">
-        {/* ✅ Theme Toggle - Position fixe en haut à droite */}
+        {/* Theme Toggle */}
         <div style={{
           position: 'fixed',
           top: '20px',
@@ -82,7 +82,7 @@ export default function RegisterPage() {
           <ThemeToggle />
         </div>
 
-        {/* ✅ Bouton retour */}
+        {/* back button */}
         <button
           onClick={() => router.push('/')}
           style={{
@@ -105,7 +105,7 @@ export default function RegisterPage() {
           ← Retour
         </button>
 
-        {/* ✅ Card centrée avec le nouveau style */}
+        {/* card */}
         <div className="register-card">
           {/* Header */}
           <div>
@@ -126,16 +126,15 @@ export default function RegisterPage() {
 			Créez votre compte gratuit
 		  </h3>
 
-          {/* Message d'erreur */}
+          {/* Error message */}
           {error && (
             <div className="login-error">
               <strong>Oops!</strong> {error}
             </div>
           )}
 
-          {/* FORMULAIRE */}
+          {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="login-form">
-            {/* Nom et Prénom sur la même ligne */}
             <div className="name-row">
               <div className="name-field">
                 <input
@@ -161,8 +160,6 @@ export default function RegisterPage() {
                 )}
               </div>
             </div>
-
-            {/* Champ Email */}
             <div>
               <input
                 {...register('email')}
@@ -174,8 +171,6 @@ export default function RegisterPage() {
                 <p className="field-error">⚠️ {errors.email.message}</p>
               )}
             </div>
-
-            {/* Champ Password */}
             <div>
               <input
                 {...register('password')}
@@ -200,8 +195,6 @@ export default function RegisterPage() {
                 <p className="field-error">⚠️ {errors.confirmPassword.message}</p>
               )}
             </div>
-
-            {/* Bouton Submit */}
             <button 
               type="submit"
               className="login-button"
@@ -210,8 +203,6 @@ export default function RegisterPage() {
 			  {isLoading ? '🔄 Création du compte...' : 'Créer mon compte !'}
             </button>
           </form>
-
-          {/* Lien vers login */}
           <div style={{ 
             textAlign: 'center', 
             marginTop: 'var(--space-lg)',

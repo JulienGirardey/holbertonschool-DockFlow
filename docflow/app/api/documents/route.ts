@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from '../../generated/prisma'
-import { getUserIdFromToken } from "@/lib/auth";
+import { getUserIdFromToken, verifyToken } from "@/lib/auth";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
