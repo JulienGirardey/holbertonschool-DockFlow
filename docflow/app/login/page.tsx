@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { LogIn } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
+import React from 'react'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email format'),
@@ -19,8 +20,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError]= useState('')
   const router = useRouter()
-  
-  // Note: react-hook-form gère automatiquement les références
   
   const {
     register,
@@ -39,24 +38,25 @@ export default function LoginPage() {
     setError('')
 
     try {
-      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(data)
       })
 
-      const result = await response.json()
+      console.log('login status', response.status, 'ok?', response.ok)
+      const text = await response.text()
+      console.log('login raw response', text)
+      // try parse JSON if possible
+      let result = {}
+      try { result = JSON.parse(text) } catch (e) { /* not JSON */ }
 
       if (!response.ok) {
-        throw new Error(result.error || 'Login failed')
+        throw new Error((result as any).error || 'Login failed')
       }
 
-      localStorage.setItem('token', result.token)
-
-      router.push('/dashboard')
+      router.replace('/dashboard')
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occured')
@@ -68,7 +68,7 @@ export default function LoginPage() {
   return (
     <div className="animate-fadeInUp">
       <div className="login-container">
-        {/* ✅ Theme Toggle - Position fixe en haut à droite */}
+        {/* Theme Toggle */}
         <div style={{
           position: 'fixed',
           top: '20px',
@@ -78,7 +78,7 @@ export default function LoginPage() {
           <ThemeToggle />
         </div>
 
-        {/* ✅ Bouton retour */}
+        {/* back button */}
         <button
           onClick={() => router.push('/')}
           style={{
@@ -111,10 +111,9 @@ export default function LoginPage() {
           </div>
 
           {/* Icon */}
-          {/* ✅ Version avec contrôle manuel complet */}
-          <div className="login-icon-container">  {/* ou .small, .large, .xl */}
+          <div className="login-icon-container">
             <div className="login-icon-bg">
-              <LogIn className='login-icon' />  {/* ✅ CHANGÉ: Supprime les classes h-6 w-6 */}
+              <LogIn className='login-icon' />
             </div>
           </div>
 
@@ -122,47 +121,40 @@ export default function LoginPage() {
             Enregistrez-vous avec votre email
           </h3>
 
-          {/* Message d'erreur */}
+          {/* Error message */}
           {error && (
             <div className="login-error">
               <strong>Oops!</strong> {error}
             </div>
           )}
 
-          {/* FORMULAIRE */}
+          {/* FORM */}
           <form onSubmit={handleSubmit(onSubmit)} className="login-form">
-            {/* Champ Email */}
             <div>
               <input
                 {...register('email')}
                 className="login-input"
                 type="email"
                 placeholder="📧 Votre addresse email"
+                autoComplete="username"
               />
               {errors.email && (
                 <p className="field-error">⚠️ {errors.email.message}</p>
               )}
             </div>
-
-            {/* Champ Password */}
             <div>
               <input
                 {...register('password')}
                 className="login-input" 
                 type="password"
                 placeholder="🔒 Votre mot de passe"
+                autoComplete="current-password"
               />
               {errors.password && (
                 <p className="field-error">⚠️ {errors.password.message}</p>
               )}
             </div>
-
-            {/* Lien "Forgot password ?" */}
-            <div className="forgot-link">
-              <a href="#">Mot de passe oublié ?</a>
-            </div>
-
-            {/* Bouton Submit */}
+            {/* Submit button */}
             <button 
               type="submit"
               className="login-button"
@@ -172,7 +164,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Lien vers register */}
+          {/* register link */}
           <div style={{ 
             textAlign: 'center', 
             marginTop: 'var(--space-lg)',

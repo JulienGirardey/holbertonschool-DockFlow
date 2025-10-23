@@ -23,7 +23,7 @@ export default function Loading() {
 			fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
 		}}>
 			<div style={{ textAlign: 'center' }}>
-				{/* Logo animé */}
+				{/* animated logo */}
 				<div style={{
 					width: '80px',
 					height: '80px',
@@ -51,7 +51,7 @@ export default function Loading() {
 					margin: '0 auto var(--space-lg)'
 				}}></div>
 
-				{/* Texte */}
+				{/* Text */}
 				<h2 style={{
 					fontSize: 'var(--text-2xl)',
 					fontWeight: 'bold',
@@ -73,7 +73,7 @@ export default function Loading() {
 					Chargement de votre espace de travail...
 				</p>
 
-				{/* Barre de progression animée */}
+				{/* progress bar */}
 				<div style={{
 					width: '200px',
 					height: '4px',
@@ -92,7 +92,6 @@ export default function Loading() {
 				</div>
 			</div>
 
-			{/* Styles d'animation inlines */}
 			<style jsx>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }

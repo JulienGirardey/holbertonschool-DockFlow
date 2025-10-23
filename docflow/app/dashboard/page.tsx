@@ -65,13 +65,10 @@ export default function Dashboard() {
 	const [deleteError, setDeleteError] = useState('')
 
 	useEffect(() => {
+		// Fetch user settings (language) using cookie-based auth
 		const fetchLang = async () => {
 			try {
-				const token = localStorage.getItem('token')
-				if (!token) return
-				const response = await fetch('/api/settings', {
-					headers: { 'Authorization': `Bearer ${token}` }
-				})
+				const response = await fetch('/api/settings', { credentials: 'include' })
 				if (response.ok) {
 					const data = await response.json()
 					if (data.language && i18n.language !== data.language) {
@@ -87,30 +84,31 @@ export default function Dashboard() {
 
 	// Initial loading - sidebar only
 	useEffect(() => {
-		const token = localStorage.getItem('token')
-
-		if (!token && pathname !== '/login') {
-			router.push('/login')
-			return
+		// Validate session via cookie; redirect to login if unauthorized
+		const init = async () => {
+			try {
+				const me = await fetch('/api/auth/me', { credentials: 'include' })
+				if (!me.ok) {
+					if (pathname !== '/login') router.push('/login')
+					return
+				}
+				// load sidebar data in parallel
+				await Promise.all([fetchDocumentsForSidebar(), fetchUserInfo()])
+			} catch (e) {
+				if (pathname !== '/login') router.push('/login')
+			} finally {
+				setSidebarLoading(false)
+			}
 		}
-
-		// Load sidebar data in parallel
-		Promise.all([
-			fetchDocumentsForSidebar(),
-			fetchUserInfo()
-		]).finally(() => {
-			setSidebarLoading(false)
-		})
+		init()
 	}, [router, pathname])
 
 	// Conditional loading depending on active section
 	useEffect(() => {
-		const token = localStorage.getItem('token')
-		if (!token && pathname !== '/login') {
-			router.push('/login')
-			return
-		}
+		// Wait for initial auth/session check to complete
+		if (sidebarLoading) return
 
+		// No localStorage token usage anymore — session is cookie-based.
 		if (activeSection === 'documents') {
 			fetchDocuments()
 		}
@@ -139,192 +137,156 @@ export default function Dashboard() {
 	// Function to load only documents for the sidebar (lightweight)
 	const fetchDocumentsForSidebar = async () => {
 		try {
-			const token = localStorage.getItem('token')
-			const response = await fetch('/api/documents?lite=true', {
-				headers: { 'Authorization': `Bearer ${token}` }
-			})
-
-			if (!response.ok) {
-				if (response.status === 401) {
-					localStorage.removeItem('token')
+			const response = await fetch('/api/documents?lite=true', { credentials: 'include' })
+             if (!response.ok) {
+                 if (response.status === 401) {
 					router.push('/login')
-					return
-				}
-				throw new Error('Failed to fetch documents')
-			}
-
-			const docs = await response.json()
-			setDocuments(docs)
-		} catch (err) {
-			setSidebarError(err instanceof Error ? err.message : 'Error fetching documents')
-		}
-	}
-
-	// Function to load all documents (documents section)
-	const fetchDocuments = async () => {
-		try {
-			setDocumentsError('')
-			const token = localStorage.getItem('token')
-			const response = await fetch('/api/documents', {
-				headers: { 'Authorization': `Bearer ${token}` }
-			})
-
-			if (!response.ok) {
-				if (response.status === 401) {
-					localStorage.removeItem('token')
+                     return
+                 }
+                 throw new Error('Failed to fetch documents')
+             }
+ 
+             const docs = await response.json()
+             setDocuments(docs)
+         } catch (err) {
+             setSidebarError(err instanceof Error ? err.message : 'Error fetching documents')
+         }
+     }
+ 
+     // Function to load all documents (documents section)
+     const fetchDocuments = async () => {
+         try {
+             setDocumentsError('')
+			const response = await fetch('/api/documents', { credentials: 'include' })
+ 
+             if (!response.ok) {
+                 if (response.status === 401) {
 					router.push('/login')
-					return
-				}
-				throw new Error('Failed to fetch documents')
-			}
-
-			const docs = await response.json()
-			setDocuments(docs)
-		} catch (err) {
-			setDocumentsError(err instanceof Error ? err.message : 'Error fetching documents')
-		}
-	}
-
-	// Fetch user settings
-	const fetchUserSettings = async () => {
-		try {
-			setProfileError('')
-			const token = localStorage.getItem('token')
-			const response = await fetch('/api/settings', {
-				headers: { 'Authorization': `Bearer ${token}` }
-			})
-
-			if (!response.ok) {
-				if (response.status === 401) {
-					localStorage.removeItem('token')
+                     return
+                 }
+                 throw new Error('Failed to fetch documents')
+             }
+ 
+             const docs = await response.json()
+             setDocuments(docs)
+         } catch (err) {
+             setDocumentsError(err instanceof Error ? err.message : 'Error fetching documents')
+         }
+     }
+ 
+     // Fetch user settings
+     const fetchUserSettings = async () => {
+         try {
+             setProfileError('')
+			const response = await fetch('/api/settings', { credentials: 'include' })
+ 
+             if (!response.ok) {
+                 if (response.status === 401) {
 					router.push('/login')
-					return
-				}
-				throw new Error('Failed to fetch settings')
-			}
-
-			const settings = await response.json()
-			setUserSettings(settings)
-		} catch (err) {
-			setProfileError(err instanceof Error ? err.message : 'Error fetching settings')
-		}
-	}
-
-	// Fetch user info
-	const fetchUserInfo = async () => {
-		try {
-			const token = localStorage.getItem('token')
-			const response = await fetch('/api/auth/me', {
-				headers: { 'Authorization': `Bearer ${token}` }
-			})
-
-			if (!response.ok) {
-				if (response.status === 401) {
-					localStorage.removeItem('token')
+                     return
+                 }
+                 throw new Error('Failed to fetch settings')
+             }
+ 
+             const settings = await response.json()
+             setUserSettings(settings)
+         } catch (err) {
+             setProfileError(err instanceof Error ? err.message : 'Error fetching settings')
+         }
+     }
+ 
+     // Fetch user info
+     const fetchUserInfo = async () => {
+         try {
+			const response = await fetch('/api/auth/me', { credentials: 'include' })
+ 
+             if (!response.ok) {
+                 if (response.status === 401) {
 					router.push('/login')
-					return
-				}
-				throw new Error('Failed to fetch user info')
-			}
-
-			const userInfoData = await response.json()
-			setUserInfo(userInfoData)
-		} catch (err) {
-			// Silently fail - user info will be handled by loading state
-		} finally {
-			setUserLoading(false)
-		}
-	}
-
-	// Save user settings
-	const saveUserSettings = async () => {
-		try {
-			setSaveLoading(true)
-			setSaveError('')
-			const token = localStorage.getItem('token')
-
+                     return
+                 }
+                 throw new Error('Failed to fetch user info')
+             }
+ 
+             const userInfoData = await response.json()
+             setUserInfo(userInfoData)
+         } catch (err) {
+             // Silently fail - user info will be handled by loading state
+         } finally {
+             setUserLoading(false)
+         }
+     }
+ 
+     // Save user settings
+     const saveUserSettings = async () => {
+         try {
+             setSaveLoading(true)
+             setSaveError('')
 			const response = await fetch('/api/settings', {
 				method: 'PUT',
-				headers: {
-					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					language: editLanguage
-				}),
+				credentials: 'include',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ language: editLanguage }),
 			})
-
-			i18n.changeLanguage(editLanguage)
-
-			if (!response.ok) {
-				if (response.status === 401) {
-					localStorage.removeItem('token')
+ 
+             i18n.changeLanguage(editLanguage)
+ 
+             if (!response.ok) {
+                 if (response.status === 401) {
 					router.push('/login')
-					return
-				}
-				throw new Error('Failed to save settings')
-			}
-
-			setUserSettings({
-				language: editLanguage
-			})
-
-			setEditingSettings(false)
-		} catch (err) {
-			setSaveError(err instanceof Error ? err.message : 'Error saving settings')
-		} finally {
-			setSaveLoading(false)
-		}
-	}
-
-	// Handle cancel edit settings
-	const cancelEdit = () => {
-		setEditingSettings(false)
-		setEditLanguage(userSettings?.language || '')
-		setSaveError('')
-	}
-
-	const startEdit = () => {
-		setEditingSettings(true)
-		setEditLanguage(userSettings?.language || '')
-	}
-
-	// Fetch document content
-	const fetchDocumentContent = async (documentId: string) => {
-		try {
-			setLoadingContent(true)
-			setContentError('')
-
-			const token = localStorage.getItem('token')
-			if (!token && pathname !== '/login') {
-				router.push('/login')
-				return
-			}
-
-			const response = await fetch(`/api/documents/${documentId}`, {
-				headers: {
-					'Authorization': `Bearer ${token}`
-				}
-			})
-
-			if (!response.ok) {
-				if (response.status === 401) {
-					localStorage.removeItem('token')
+                     return
+                 }
+                 throw new Error('Failed to save settings')
+             }
+ 
+             setUserSettings({
+                 language: editLanguage
+             })
+ 
+             setEditingSettings(false)
+         } catch (err) {
+             setSaveError(err instanceof Error ? err.message : 'Error saving settings')
+         } finally {
+             setSaveLoading(false)
+         }
+     }
+ 
+     // Handle cancel edit settings
+     const cancelEdit = () => {
+         setEditingSettings(false)
+         setEditLanguage(userSettings?.language || '')
+         setSaveError('')
+     }
+ 
+     const startEdit = () => {
+         setEditingSettings(true)
+         setEditLanguage(userSettings?.language || '')
+     }
+ 
+     // Fetch document content
+     const fetchDocumentContent = async (documentId: string) => {
+         try {
+             setLoadingContent(true)
+             setContentError('')
+			const response = await fetch(`/api/documents/${documentId}`, { credentials: 'include' })
+ 
+             if (!response.ok) {
+                 if (response.status === 401) {
 					router.push('/login')
-					return
-				}
-				throw new Error('Failed to fetch document content')
-			}
+                     return
+                 }
+                 throw new Error('Failed to fetch document content')
+             }
+ 
+             const document = await response.json()
+             setDocumentContent(document.rawContent || 'No content available')
 
-			const document = await response.json()
-			setDocumentContent(document.rawContent || 'No content available')
-
-		} catch (err) {
-			setContentError(err instanceof Error ? err.message : 'Error fetching document')
-		} finally {
-			setLoadingContent(false)
-		}
-	}
+         } catch (err) {
+             setContentError(err instanceof Error ? err.message : 'Error fetching document')
+         } finally {
+             setLoadingContent(false)
+         }
+     }
 
 	const cancelEditDocument = () => {
 		setEditingDocument(false)
@@ -345,12 +307,9 @@ export default function Dashboard() {
 		setIsDeleting(true)
 		try {
 			const response = await fetch(`/api/documents/${deleteConfirm}`, {
-				method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${localStorage.getItem('token')}`
-				}
-			})
+                 method: 'DELETE',
+				credentials: 'include'
+             })
 
 			if (response.ok) {
 				setDocuments(documents.filter(doc => doc.id !== deleteConfirm))
@@ -428,8 +387,9 @@ export default function Dashboard() {
 				handleDocumentSelect={handleDocumentSelect}
 				userLoading={userLoading}
 				userInfo={userInfo}
-				onLogout={() => {
-					localStorage.removeItem('token')
+				onLogout={async () => {
+					// call logout endpoint to clear cookie, then redirect
+					await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
 					router.push('/login')
 				}}
 			/>

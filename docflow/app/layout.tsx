@@ -9,9 +9,6 @@ export const metadata: Metadata = {
   description: "An intelligent document editor",
 };
 
-// ✅ Configuration viewport séparée (Next.js 14+)
-
-
 export default function RootLayout({
   children,
 }: {

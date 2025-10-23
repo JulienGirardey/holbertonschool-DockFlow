@@ -69,12 +69,11 @@ export default function EditDocumentForm({
     setAiGenerating(true)
     setAiError('')
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`/api/documents/${document.id}/generate`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           prompt: aiPrompt,
