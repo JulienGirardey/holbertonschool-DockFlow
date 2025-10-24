@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from '../../../generated/prisma'
 import { generateToken } from '../../../../lib/auth';
-import { serialize } from 'cookie'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -54,30 +53,29 @@ export async function POST(req: NextRequest) {
       email: user.email
     });
 
-	const cookie = serialize('token', token, {
-		httpOnly: true,
-		secure: process.env.NODE_ENV === 'production',
-		sameSite: 'lax',
-		path: '/',
-		maxAge: 7 * 24 * 60 * 60,
-	})
+    const res = NextResponse.json({
+        ok: true,
+        message: "Login successful",
+        user: {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email
+        },
+      }
+    );
 
-    return NextResponse.json({
-			ok: true,
-      message: "Login successful",
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email
-      },
-    },
-		{
-			headers: {
-				'Set-Cookie': cookie,
-			},
-		}
-	);
+    res.cookies.set({
+      name: "token",
+      value: token,
+      httpOnly: true, // <-- rend le cookie inaccessible via document.cookie
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30 // 30 jours
+    });
+
+    return res;
     
   } catch (error) {
     console.error('Login error:', error);

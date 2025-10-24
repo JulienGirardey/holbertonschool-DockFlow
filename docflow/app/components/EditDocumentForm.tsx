@@ -3,6 +3,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
+import React from "react";
+import { apiFetch } from "@/lib/api";
 
 interface Document {
   id: string
@@ -93,6 +95,15 @@ export default function EditDocumentForm({
     } finally {
       setAiGenerating(false)
     }
+  }
+
+  async function handleUpdate(e: React.FormEvent) {
+    e.preventDefault();
+    const res = await apiFetch(`/api/documents/${document.id}`, {
+      method: "PUT",
+      body: JSON.stringify({ title: editedTitle, content: editedContent }),
+    });
+    // ...existing code...
   }
 
   return (

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from '../../generated/prisma'
-import { getUserIdFromToken } from "@/lib/auth";
+import { getServerSessionOrNull } from "@/lib/serverAuth";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -11,91 +11,70 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 export async function GET(req: NextRequest) {
-	try {
-		// recovery userId from the parameters query
-		const userId = getUserIdFromToken(req);
-		if (!userId) {
-			return NextResponse.json(
-				{ error: "Unauthorized" },
-				{ status: 401 }
-			);
-		}
+  try {
+    // ensure we pass req so cookie fallback works
+    const session = await getServerSessionOrNull(req);
+    if (!session || !session.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-		// recovery user's settings
-		const settings = await prisma.settings.findUnique({
-			where: { userId: userId },
-			select: {
-				id: true,
-				userId: true,
-				language: true
-			}
-		});
+    const { searchParams } = new URL(req.url);
+    const queryUserId = searchParams.get("userId");
+    // default to authenticated user id when query param is absent
+    const userId = queryUserId ?? (session.user as any).id;
 
-		// if no settings, return default values
-		if (!settings) {
-			return NextResponse.json({
-				userId: userId,
-				language: "en"
-			});
-		}
+    // if query provided, enforce ownership
+    if (queryUserId && queryUserId !== (session.user as any).id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-		return NextResponse.json(settings);
+    const settings = await prisma.settings.findUnique({
+      where: { userId: userId }
+    });
 
-	} catch (error) {
-		console.error('Get settings failed:', error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
-	}
+    if (!settings) {
+      return NextResponse.json({ userId, language: "en", colorMode: "light" });
+    }
+
+    return NextResponse.json(settings);
+  } catch (error) {
+    console.error('Get settings failed:', error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
 
 export async function PUT(req: NextRequest) {
-	try {
-		// recovery body's data
-		const userId = getUserIdFromToken(req);
+  try {
+    const session = await getServerSessionOrNull(req);
+    if (!session || !session.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-		// validation
-		if (!userId) {
-			return NextResponse.json(
-				{ error: "Unauthorized" },
-				{ status: 401 }
-			);
-		}
+    const body = await req.json();
+    // allow missing userId in body and default to authenticated user
+    const userId = body.userId ?? (session.user as any).id;
+    const { language, colorMode } = body;
 
-		const { language } = await req.json();
+    // require at least one field to update
+    if (!language && !colorMode) {
+      return NextResponse.json({ error: "At least one field (language or colorMode) is required" }, { status: 400 });
+    }
 
-		// validation of obligated field
-		if (!language) {
-			return NextResponse.json(
-				{ error: "At least one field (language) is required" },
-				{ status: 400 }
-			);
-		}
+    if (userId !== (session.user as any).id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-		// upsert settings (create or update)
-		const settings = await prisma.settings.upsert({
-			where: { userId: userId },
-			update: {
-				language
-			},
-			create: {
-				userId,
-				language
-			},
-			select: {
-				id: true,
-				language: true
-			}
-		});
+    const settings = await prisma.settings.upsert({
+      where: { userId },
+      update: {
+        ...(language && { language })
+      },
+      create: {
+        userId,
+        language: language ?? "en"
+      },
+      select: { id: true, userId: true, language: true }
+    });
 
-		return NextResponse.json(settings);
-
-	} catch (error) {
-		console.error("PUT settings failed:", error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
-	}
+    return NextResponse.json(settings);
+  } catch (error) {
+    console.error("Update settings failed:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

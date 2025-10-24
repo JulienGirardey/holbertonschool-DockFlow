@@ -1,63 +1,98 @@
-import jwt from 'jsonwebtoken'
-import type { NextRequest } from 'next/server'
+import jwt from "jsonwebtoken";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { NextAuthOptions } from "next-auth";
+import { prisma } from "./prisma";
+import bcrypt from "bcryptjs";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "change-me";
 
 export interface TokenPayload {
   userId: string;
-  email: string;
+  email?: string;
   iat?: number;
   exp?: number;
 }
 
-export function generateToken(payload: { userId: string; email: string }): string {
-  // genere the JWT token
-  const token = jwt.sign(
-    payload,
-    JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-  return token;
+export const authOptions: NextAuthOptions = {
+  session: { strategy: "jwt" },
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+        if (!user) return null;
+        const ok = await bcrypt.compare(credentials.password, user.password);
+        if (!ok) return null;
+        return { id: user.id, email: user.email, name: `${user.firstName} ${user.lastName}` };
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) (token as any).id = (user as any).id;
+      return token;
+    },
+    async session({ session, token }) {
+      if (token && session.user) (session.user as any).id = (token as any).id;
+      return session;
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET || JWT_SECRET,
+};
+
+export function generateToken(payload: { userId: string; email?: string }): string {
+  return jwt.sign(payload as any, JWT_SECRET, { expiresIn: "24h" });
 }
 
 export function verifyToken(token: string) {
-  if (!process.env.JWT_SECRET) throw new Error('Missing JWT_SECRET')
-  return jwt.verify(token, process.env.JWT_SECRET) as Record<string, any>
+  if (!JWT_SECRET) throw new Error("Missing JWT secret");
+  return jwt.verify(token, JWT_SECRET) as Record<string, any>;
 }
 
-// Remplace / ajoute la fonction getUserIdFromToken pour supporter Authorization + cookie
-export function getUserIdFromToken(req: NextRequest | { headers?: any }) {
+import type { NextRequest } from "next/server";
+export function getUserIdFromToken(req: NextRequest | { headers?: any } | string) {
   try {
-    // 1) Header Authorization: "Bearer <token>"
     const getHeader = (name: string) =>
-      typeof req.headers?.get === 'function'
-        ? req.headers.get(name)
-        : (req.headers && (req.headers as any)[name?.toLowerCase()])
+      typeof (req as any).headers?.get === "function"
+        ? (req as any).headers.get(name)
+        : (req as any).headers && (req as any).headers[name?.toLowerCase()];
 
-    const authHeader = getHeader('authorization') || getHeader('Authorization')
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.slice(7)
-      const payload = verifyToken(token)
-      return (payload as any).userId ?? null
+    if (typeof req === "string") {
+      // direct token string
+      const payload = verifyToken(req);
+      return (payload as any).userId ?? null;
     }
 
-    // 2) Cookie header: look for token=...
-    const cookieHeader = getHeader('cookie') || getHeader('Cookie') || (req as any).cookie
-    if (cookieHeader && typeof cookieHeader === 'string') {
-      const m = cookieHeader.match(/(^|;\s*)token=([^;]+)/)
+    const authHeader = getHeader("authorization") || getHeader("Authorization");
+    if (authHeader && typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const payload = verifyToken(token);
+      return (payload as any).userId ?? null;
+    }
+
+    const cookieHeader = getHeader("cookie") || getHeader("Cookie") || (req as any).cookie;
+    if (cookieHeader && typeof cookieHeader === "string") {
+      const m = cookieHeader.match(/(^|;\s*)token=([^;]+)/);
       if (m) {
         try {
-          const token = decodeURIComponent(m[2])
-          const payload = verifyToken(token)
-          return (payload as any).userId ?? null
+          const token = decodeURIComponent(m[2]);
+          const payload = verifyToken(token);
+          return (payload as any).userId ?? null;
         } catch (e) {
-          return null
+          return null;
         }
       }
     }
 
-    return null
-  } catch (e) {
-    return null
+    return null;
+  } catch {
+    return null;
   }
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from '../../../generated/prisma'
-import { getUserIdFromToken } from "@/lib/auth";
+import { getServerSessionOrNull } from "@/lib/serverAuth";
 
 const globalForPrisma = globalThis as unknown as {
 	prisma: PrismaClient | undefined
@@ -12,29 +12,17 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 export async function GET(
 	req: NextRequest,
-	{ params }: { params: Promise<{ id: string }> }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		//recovery userId by parameters query
-		const userId = getUserIdFromToken(req);
-		//check if userId is present
-		if (!userId) {
-			return NextResponse.json(
-				{ error: "Unauthorized" },
-				{ status: 401 }
-			);
-		}
+		const session = await getServerSessionOrNull();
+		if (!session || !(session.user as any)?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-		// recovery the request AI ID
 		const { id } = await params;
 		const requestId = id;
 
-		// search AI request by ID with his relation
-		const aiRequest = await prisma.aiRequest.findFirst({
-			where: {
-				id: requestId,
-				userId: userId
-			},
+		const aiRequest = await prisma.aiRequest.findUnique({
+			where: { id: requestId },
 			select: {
 				id: true,
 				userId: true,
@@ -43,35 +31,18 @@ export async function GET(
 				response: true,
 				createdAt: true,
 				updatedAt: true,
-				userDocument: {
-					select: {
-						id: true,
-						title: true,
-						objective: true
-					}
-				},
-				user: {
-					select: {
-						id: true,
-						firstName: true,
-						lastName: true,
-						email: true
-					}
-				}
+				userDocument: { select: { id: true, title: true } },
+				user: { select: { id: true, firstName: true, lastName: true, email: true } }
 			}
 		});
 
-		// check if the request exists
-		if (!aiRequest) {
-			return NextResponse.json(
-				{ error: "AI request not found" },
-				{ status: 404 }
-			);
+		if (!aiRequest) return NextResponse.json({ error: "AI request not found" }, { status: 404 });
+
+		if (aiRequest.userId !== (session.user as any).id) {
+			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 		}
 
-		// return the AI request
 		return NextResponse.json(aiRequest);
-
 	} catch (error) {
 		console.error('Display AI request failed:', error);
 		return NextResponse.json(
@@ -86,46 +57,21 @@ export async function DELETE(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		//recovery userId by parameters query
-		const userId = getUserIdFromToken(req);
-		//check if userId is present
-		if (!userId) {
-			return NextResponse.json(
-				{ error: "Unauthorized" },
-				{ status: 401 }
-			);
-		}
+		const session = await getServerSessionOrNull();
+		if (!session || !(session.user as any)?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-		// recovery the AI request
 		const { id } = await params;
 		const requestId = id;
 
-		// check the properties
-		const existingAiRequest = await prisma.aiRequest.findFirst({
-			where: {
-				id: requestId,
-				userId: userId
-			}
-		});
-
-		if (!existingAiRequest) {
-			return NextResponse.json(
-				{ error: "Document not found" },
-				{ status: 404 }
-			);
+		const existing = await prisma.aiRequest.findUnique({ where: { id: requestId }, select: { userId: true } });
+		if (!existing) return NextResponse.json({ error: "AI request not found" }, { status: 404 });
+		if (existing.userId !== (session.user as any).id) {
+			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 		}
 
-		// delete the AI request
-		await prisma.aiRequest.delete({
-			where: { id: requestId }
-		});
+		await prisma.aiRequest.delete({ where: { id: requestId } });
 
-		// return the delete confirmation
-		return NextResponse.json(
-			{ message: "The AI request has been deleted successfully" },
-			{ status: 200 }
-		);
-
+		return NextResponse.json({ message: "AI request deleted successfully" }, { status: 200 });
 	} catch (error) {
 		console.error('Delete AI request failed:', error);
 		return NextResponse.json(

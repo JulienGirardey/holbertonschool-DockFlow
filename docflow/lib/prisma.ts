@@ -1,12 +1,7 @@
-import { PrismaClient } from '../app/generated/prisma'
+import { PrismaClient } from "../app/generated/prisma"; // <-- point vers le client généré
 
-declare global {
-  // évite plusieurs instances en dev (HMR)
-  // eslint-disable-next-line no-var
-  var __prisma: PrismaClient | undefined
-}
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-const prisma = global.__prisma ?? new PrismaClient()
-if (process.env.NODE_ENV === 'development') global.__prisma = prisma
+export const prisma = globalForPrisma.prisma ?? new PrismaClient();
 
-export default prisma
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

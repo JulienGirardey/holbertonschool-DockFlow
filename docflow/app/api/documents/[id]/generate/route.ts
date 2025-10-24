@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from '../../../../generated/prisma'
-import { getUserIdFromToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getServerSessionOrNull } from "@/lib/serverAuth";
 import Groq from 'groq-sdk';
-import { franc } from 'franc'
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient()
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY!
@@ -20,58 +12,50 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = getUserIdFromToken(req);
-    if (!userId) {
+    // ensure session is validated (support NextAuth + token cookie fallback)
+    const session = await getServerSessionOrNull(req);
+    if (!session || !(session.user as any)?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const { prompt } = await req.json();
+    const documentId = id;
 
-    if (!prompt) {
-      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
-    }
-
-    // fetch document BEFORE building prompts (avoid usage before declaration)
-    const document = await prisma.userDocuments.findFirst({
-      where: { id, userId }
+    // ensure document exists and belongs to authenticated user
+    const doc = await prisma.userDocuments.findUnique({
+      where: { id: documentId },
+      select: { userId: true, title: true, rawContent: true }
     });
-
-    if (!document) {
-      return NextResponse.json({ error: "Document not found" }, { status: 404 });
+    if (!doc) return NextResponse.json({ error: "Document not found" }, { status: 404 });
+    if (doc.userId !== (session.user as any).id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // detect language from the user's prompt (franc returns iso639-3 codes)
-    const code = franc(prompt);
-    let detectedLang = 'en';
-    if (code === 'fra' || code === 'frc' || code === 'fre') detectedLang = 'fr';
-    else if (code === 'eng') detectedLang = 'en';
-    // fallback stays 'en' if undetermined
+    const { prompt } = await req.json();
+    if (!prompt) return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
 
-    const systemPrompt =
-      detectedLang === 'en'
-        ? "You are an expert writing assistant. Generate detailed, relevant, and well-structured content according to the user's request."
-        : "Tu es un assistant d'écriture expert. Génère du contenu détaillé, pertinent et bien structuré selon la demande de l'utilisateur.";
+    // Strong instruction: detect REQUEST language and PREPEND a LANGUAGE tag.
+    // Model MUST start response with: LANGUAGE: en  OR LANGUAGE: fr
+    const systemPrompt = `You are an expert writing assistant.
+Look ONLY at the text in the field named "REQUEST" to determine the language.
+If "REQUEST" is English, you MUST produce the entire response in English.
+If "REQUEST" is French, you MUST produce the entire response in French.
+You MUST begin the response with a single-line language tag exactly like this: "LANGUAGE: en" or "LANGUAGE: fr", followed by a blank line and then the generated content.
+Ignore the language of TITLE or CURRENT CONTENT when choosing the response language. Do not include any other languages.`;
 
-    const userPrompt =
-      detectedLang === 'en'
-        ? `TITLE: ${document.title || document.objective || 'Untitled'}
-CURRENT CONTENT: ${document.rawContent || 'No content'}
+    const userPrompt = `TITLE: ${doc.title || 'Untitled'}
+CURRENT CONTENT: ${doc.rawContent || 'No content'}
 REQUEST: ${prompt}
 
-Generate informative content adapted to the subject. Be precise and technical if necessary.`
-        : `TITRE: ${document.title || document.objective || 'Sans titre'}
-CONTENU ACTUEL: ${document.rawContent || 'Aucun contenu'}
-DEMANDE: ${prompt}
-
-Génère du contenu informatif et adapté au sujet. Sois précis et technique si nécessaire.`;
+IMPORTANT: Use the language of the text in the "REQUEST" field for the whole response (ignore TITLE/CURRENT CONTENT language).
+Begin with the LANGUAGE tag as described in the system instructions. Generate informative content adapted to the subject. Be precise and technical if necessary.`;
 
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     // replace both count queries with a single one
     const counts = await prisma.aiRequest.groupBy({
       by: ['userId'],
       where: {
-        userId: document.userId,
+        userId: doc.userId,
         createdAt: { gte: oneHourAgo }
       },
       _count: { id: true }
@@ -79,7 +63,7 @@ Génère du contenu informatif et adapté au sujet. Sois précis et technique si
 
     const recentRequests = await prisma.aiRequest.findMany({
       where: {
-        userId: document.userId,
+        userId: doc.userId,
         createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
       },
       select: { createdAt: true }
@@ -121,7 +105,7 @@ Génère du contenu informatif et adapté au sujet. Sois précis et technique si
         stream: false
       });
 
-      generatedContent = completion.choices[0]?.message?.content || generateFallback(prompt, document);
+      generatedContent = completion.choices[0]?.message?.content || generateFallback(prompt, doc);
       aiResponse = "Groq Llama-3.1-8B";
 
     } catch (error) {
@@ -129,10 +113,29 @@ Génère du contenu informatif et adapté au sujet. Sois précis et technique si
       aiResponse = "Smart fallback";
     }
 
+    // enforce language tag parsing: expect first non-empty line "LANGUAGE: en" or "LANGUAGE: fr"
+    if (generatedContent) {
+      const lines = generatedContent.split(/\r?\n/);
+      const firstNonEmpty = lines.find(l => l.trim().length > 0) || '';
+      const m = firstNonEmpty.match(/^LANGUAGE:\s*(en|fr)\b/i);
+      if (m) {
+        // remove the tag line and the next blank line if present
+        let startIdx = lines.indexOf(firstNonEmpty);
+        // drop the tag line
+        lines.splice(startIdx, 1);
+        // drop a following empty line
+        if (lines[startIdx] !== undefined && lines[startIdx].trim() === '') lines.splice(startIdx, 1);
+        generatedContent = lines.join('\n').trim();
+      } else {
+        // if model didn't prepend tag, leave content but you may fallback or log
+        // (optionally) we could default to English: keep as-is
+      }
+    }
+
     // save AI request
     await prisma.aiRequest.create({
       data: {
-        userId: document.userId,
+        userId: doc.userId,
         userDocumentId: id,
         prompt,
         response: aiResponse
@@ -156,7 +159,7 @@ Génère du contenu informatif et adapté au sujet. Sois précis et technique si
     return NextResponse.json(generatedDocument, { status: 201 });
 
   } catch (error) {
-    console.error('Generate document error:', error);
+    console.error("Generate document failed:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -231,36 +234,34 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = getUserIdFromToken(req);
-    if (!userId) {
+    // pass req so the token-cookie fallback can run
+    const session = await getServerSessionOrNull(req);
+    if (!session || !((session.user as any)?.id)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
+    const documentId = id;
 
-    const document = await prisma.userDocuments.findFirst({
-      where: { id, userId }
-    });
-
-    if (!document) {
-      return NextResponse.json({ error: "Document not found" }, { status: 404 });
+    const document = await prisma.userDocuments.findUnique({ where: { id: documentId }, select: { userId: true } });
+    if (!document) return NextResponse.json({ error: "Document not found" }, { status: 404 });
+    if (document.userId !== (session.user as any).id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const generatedDocuments = await prisma.generatedDocument.findMany({
-      where: { userDocumentId: id },
+      where: { userDocumentId: documentId },
       select: {
         id: true,
         userDocumentId: true,
         generatedContent: true,
         createdAt: true,
-        updatedAt: true,
-        userDocument: true
+        updatedAt: true
       },
       orderBy: { updatedAt: 'desc' }
     });
 
     return NextResponse.json(generatedDocuments);
-
   } catch (error) {
     console.error('Display documents error:', error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

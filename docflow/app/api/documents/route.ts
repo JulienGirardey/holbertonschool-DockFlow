@@ -1,102 +1,92 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from '../../generated/prisma'
-import { getUserIdFromToken, verifyToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getServerSessionOrNull } from "@/lib/serverAuth";
+import { z } from "zod";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient()
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+const createDocumentSchema = z.object({
+  userId: z.string().optional(),
+  title: z.string().min(1),
+  objective: z.string().min(1),
+  rawContent: z.string().min(1)
+});
 
 export async function GET(req: NextRequest) {
-	try {
-		//recovery userId by parameters query
-		const userId = getUserIdFromToken(req);
-		//check if userId is present
-		if (!userId) {
-			return NextResponse.json(
-				{ error: "Unauthorized" },
-				{ status: 401 }
-			);
-		}
+  try {
+    // pass req to allow token-cookie fallback
+    const session = await getServerSessionOrNull(req);
+    if (!session || !session.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-		//Search all documents of this user
-		const documents = await prisma.userDocuments.findMany({
-			where: { userId },
-			select: {
-				id: true,
-				title: true,
-				objective: true,
-				rawContent: true,
-				createdAt: true,
-				updatedAt: true
-			},
-			orderBy: { updatedAt: 'desc' }
-		});
+    const { searchParams } = new URL(req.url);
+    // use query userId if provided, otherwise use authenticated user id
+    const queryUserId = searchParams.get('userId');
+    const userId = queryUserId ?? (session.user as any).id;
 
-		//return list
-		return NextResponse.json(documents);
+    // if query provided, still enforce ownership
+    if (queryUserId && queryUserId !== (session.user as any).id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-	} catch (error) {
-		console.error('Get documents error:', error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            {status: 500 }
-        );
-	}
+    // Search all documents of this user
+    const documents = await prisma.userDocuments.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        title: true,
+        objective: true,
+        rawContent: true,
+        createdAt: true,
+        updatedAt: true
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    return NextResponse.json(documents);
+  } catch (error) {
+    console.error('Get documents error:', error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
-	try {
-		// recovery the userId of JWT token
-		const userId = getUserIdFromToken(req);
-		if (!userId) {
-			return NextResponse.json(
-				{ error: "Unauthorized" },
-				{ status: 401 }
-			);
-		}
+  try {
+    const session = await getServerSessionOrNull(req);
+    if (!session || !(session.user as any)?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-		// recovery the data of body
-		const { title, objective, rawContent } = await req.json();
+    const body = await req.json();
+    const parsed = createDocumentSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues.map(i => i.message).join(", ") }, { status: 400 });
+    }
 
-		// validation
-		if (!title || !objective || !rawContent) {
-			return NextResponse.json(
-				{ error: "All fields are required (userId, title, objective, rawContent)" },
-				{ status: 400 }
-			);
-		}
+    // default userId to authenticated user if not provided
+    const { userId: bodyUserId, title, objective, rawContent } = parsed.data;
+    const userId = bodyUserId ?? (session.user as any).id;
 
-		// create document
-		const document = await prisma.userDocuments.create({
-			data: {
-				userId,
-				title,
-				objective,
-				rawContent
-			},
-			select: {
-				id: true,
-				userId: true,
-				title: true,
-				objective: true,
-				rawContent: true,
-				createdAt: true,
-				updatedAt: true
-			}
-		});
+    // enforce ownership
+    if (userId !== (session.user as any).id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-		// return the new document
-		return NextResponse.json(document, { status: 201 });
+    const created = await prisma.userDocuments.create({
+      data: { userId, title, objective, rawContent },
+      select: {
+        id: true,
+        userId: true,
+        title: true,
+        objective: true,
+        rawContent: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
 
-	} catch (error) {
-		console.error('Create document error:', error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
-	}
+    return NextResponse.json(created, { status: 201 });
+  } catch (error) {
+    console.error("Create document failed:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

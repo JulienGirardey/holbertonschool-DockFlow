@@ -3,6 +3,8 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
+import React from "react";
+import { apiFetch } from "@/lib/api";
 
 interface CreateDocumentFormProps {
   onDocumentCreated: (document: any) => void
@@ -28,12 +30,8 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
         rawContent: newDocContent.trim()
       }
 
-      const response = await fetch('/api/documents', {
+      const response = await apiFetch('/api/documents', {
         method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(requestData)
       })
 
@@ -76,7 +74,6 @@ export default function CreateDocumentForm({ onDocumentCreated, onSectionChange 
           fontSize: 'var(--text-base)',
           marginBottom: 'var(--space-xl)'
         }}>
-          {t('Notre IA va transformer votre idée en document professionnel')}
         </p>
       </div>
 
