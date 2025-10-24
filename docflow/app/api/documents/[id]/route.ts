@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSessionOrNull } from "@/lib/serverAuth";
 import { z } from "zod";
+import { sanitizeForStorage } from "@/lib/sanitize";
 
 const updateDocumentSchema = z.object({
   title: z.string().min(1).optional(),
@@ -68,7 +69,7 @@ export async function PUT(
       data: {
         ...(title && { title }),
         ...(objective && { objective }),
-        ...(rawContent && { rawContent })
+        ...(rawContent && { rawContent: sanitizeForStorage(rawContent) })
       },
       select: {
         id: true,

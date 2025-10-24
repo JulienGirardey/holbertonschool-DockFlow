@@ -71,12 +71,8 @@ export default function EditDocumentForm({
     setAiGenerating(true)
     setAiError('')
     try {
-      const response = await fetch(`/api/documents/${document.id}/generate`, {
+      const response = await apiFetch(`/api/documents/${document.id}/generate`, {
         method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           prompt: aiPrompt,
           currentContent: editedContent
@@ -97,13 +93,40 @@ export default function EditDocumentForm({
     }
   }
 
-  async function handleUpdate(e: React.FormEvent) {
-    e.preventDefault();
-    const res = await apiFetch(`/api/documents/${document.id}`, {
+  interface DocumentUpdatePayload {
+    title?: string
+    objective?: string
+    rawContent?: string
+  }
+
+  interface ApiErrorResponse {
+    error?: string
+    [key: string]: any
+  }
+
+  interface ApiSuccessResponse {
+    [key: string]: any
+  }
+
+  async function handleUpdate(e: React.FormEvent<HTMLFormElement>): Promise<void> {
+    e.preventDefault()
+    // Use the current document id and local edited state instead of undefined variables
+    const res = (await apiFetch(`/api/documents/${document.id}`, {
       method: "PUT",
-      body: JSON.stringify({ title: editedTitle, content: editedContent }),
-    });
-    // ...existing code...
+      body: JSON.stringify({ title: editedTitle, rawContent: editedContent } as DocumentUpdatePayload),
+    })) as Response
+
+    // parse JSON once (fallback to a simple error shape if parsing fails)
+    const json = (await res.json().catch(() => ({ error: "Unknown" } as ApiErrorResponse))) as ApiErrorResponse | ApiSuccessResponse
+
+    if (!res.ok) {
+      // basic error handling: log and stop (parent onSave/onCancel handle UI state)
+      console.error('Document update failed', json)
+      return
+    }
+
+    // on success, call the provided onSave handler to propagate changes
+    await onSave(editedTitle, editedContent)
   }
 
   return (

@@ -1,23 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimit";
 import { getServerSessionOrNull } from "@/lib/serverAuth";
+import { prisma } from "@/lib/prisma";
 import Groq from 'groq-sdk';
+import { verifyCsrfAndOrigin } from "@/lib/csrf";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY!
 });
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    // ensure session is validated (support NextAuth + token cookie fallback)
-    const session = await getServerSessionOrNull(req);
-    if (!session || !(session.user as any)?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // validate session first
+  const session = await getServerSessionOrNull(req);
+  if (!session || !(session.user as any)?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
+  // per-user rate limit for generation to protect costs: 3 requests / 60s per IP (or per-user if you change key)
+  const rl = await rateLimit(req, `generate:${(session.user as any).id}`, 3, 60);
+  if (rl) return rl;
+
+  // CSRF + Origin check (double-submit + Origin/Referer)
+  if (!verifyCsrfAndOrigin(req)) {
+    return NextResponse.json({ error: "CSRF check failed" }, { status: 403 });
+  }
+  
+  try {
     const { id } = await params;
     const documentId = id;
 

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 import { getServerSessionOrNull } from "@/lib/serverAuth";
 import { z } from "zod";
+import { sanitizeForStorage } from "@/lib/sanitize";
 
 const createDocumentSchema = z.object({
   userId: z.string().optional(),
@@ -50,6 +52,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  // rate limit document creation: 10 requests / 60s per IP
+  const rl = await rateLimit(req, "create_doc", 10, 60);
+  if (rl) return rl;
+
   try {
     const session = await getServerSessionOrNull(req);
     if (!session || !(session.user as any)?.id) {
@@ -66,13 +72,16 @@ export async function POST(req: NextRequest) {
     const { userId: bodyUserId, title, objective, rawContent } = parsed.data;
     const userId = bodyUserId ?? (session.user as any).id;
 
+    // sanitize rawContent before storing
+    const safeRawContent = sanitizeForStorage(rawContent);
+
     // enforce ownership
     if (userId !== (session.user as any).id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const created = await prisma.userDocuments.create({
-      data: { userId, title, objective, rawContent },
+      data: { userId, title, objective, rawContent: safeRawContent },
       select: {
         id: true,
         userId: true,
