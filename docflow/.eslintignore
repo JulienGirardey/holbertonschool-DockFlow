@@ -1,0 +1,9 @@
+# Generated / build artifacts
+.next
+app/generated
+app/generated/**
+app-build-manifest.json
+build
+node_modules
+dist
+public

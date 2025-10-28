@@ -7,13 +7,18 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest",
+    "test:run": "BASE_URL=http://localhost:3001 vitest run",
+    "test:watch": "vitest --watch",
     "db:start": "docker-compose up -d",
     "db:stop": "docker-compose down",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force && npm run db:seed",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "e2e": "node tests/e2e.test.js",
+    "e2e:ci": "node scripts/run-e2e.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -43,6 +48,8 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.14",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsdom": "^27.0.0",
     "@types/node": "^20.19.20",
@@ -53,6 +60,8 @@
     "eslint-config-next": "15.5.4",
     "prisma": "^6.16.2",
     "tsx": "^4.20.6",
-    "typescript": "^5"
-  }
+    "typescript": "^5",
+    "vitest": "^4.0.3"
+  },
+  "type": "module"
 }

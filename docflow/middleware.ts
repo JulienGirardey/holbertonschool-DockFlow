@@ -2,16 +2,20 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
+  // Avoid applying strict CSP during local development (Turbopack / HMR inject inline scripts)
+  if (process.env.NODE_ENV !== "production") {
+    return NextResponse.next();
+  }
+
   const res = NextResponse.next();
 
-  // Minimal CSP: allow same-origin and trusted assets; adjust for CDNs if needed.
   const csp = [
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.groq.ai", // adjust as needed
+    "connect-src 'self' https://api.groq.ai",
   ].join("; ");
 
   res.headers.set("Content-Security-Policy", csp);
@@ -23,7 +27,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
